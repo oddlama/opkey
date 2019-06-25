@@ -74,16 +74,30 @@ void Application::operator()() {
 		readChannel[c] = Mcp3208::Command(c, false);
 	}
 
+	Mcp3208::Command* commandQueue = (Mcp3208::Command*)heap_caps_malloc(sizeof(Mcp3208::Command) * 100, MALLOC_CAP_DMA);
+	auto Sample100 = [&](int c) {
+		int ival = 0;
+		for (int i = 0; i < 100; ++i) {
+			commandQueue[i] = readChannel[c];
+		}
+		Mcp3208::Command::Execute(mcp, commandQueue, 100);
+		for (int i = 0; i < 100; ++i) {
+			ival += commandQueue[i].GetValue();
+		}
+		return ival / 100;
+	};
+
 	while (true) {
-		//static unsigned long last = 0;
+		static unsigned long last = 0;
 		//static uint32_t cycles = 0;
 		if (deviceConnected) {
 		} else {
 			auto ReadCh = [&](int c) {
-				int multisample = 100000;
+				int multisample = 1000;//00;
 				int ival = 0;
 				for (int i = 0; i < multisample; ++i) {
-					ival += mcp.Read(c);
+					ival += Sample100(c);
+					//ival += mcp.Read(readChannel[c]);
 				}
 				double val = static_cast<double>(ival) / multisample;
 				return val;
@@ -92,7 +106,11 @@ void Application::operator()() {
 				printf("%6.1f (c%d), ", ReadCh(c), c);
 			}
 			printf("\n");
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
+			auto now = esp_timer_get_time();
+			double frac = 1000000.0 / (now - last);
+			printf("%6.3f ksps (800k in %7.3f sec) multisample per sensor at 480 Hz: %6.3f sps\n", 800.0 * frac, 1.0 / frac, 8000.0 / 9.0 / 48 * frac);
+			last = now;
+			//vTaskDelay(1000 / portTICK_PERIOD_MS);
 
 			//spi.init();
 			//auto ReadAdc(int channel) {
@@ -183,4 +201,6 @@ void Application::operator()() {
 			//suspend();
 		}
 	}
+
+	heap_caps_free(commandQueue);
 }

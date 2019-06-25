@@ -28,7 +28,7 @@ extern "C" {
 	#include <soc/i2s_struct.h>
 }
 
-#include <rom/lldesc.h>
+#include <esp32/rom/lldesc.h>
 #include <esp_intr_alloc.h>
 #include <esp_log.h>
 
