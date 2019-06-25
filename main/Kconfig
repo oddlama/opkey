@@ -1,0 +1,24 @@
+menu "Piano Controller"
+    choice PCT_PINNED_TO_CORE_CHOICE
+		prompt "The cpu core which the piano controller runs on"
+        depends on !FREERTOS_UNICORE
+		default PCT_PINNED_TO_CORE_1
+        help
+			Specify the cpu core for the piano controller.
+			Can not specify no-affinity.
+
+        config PCT_PINNED_TO_CORE_0
+            bool "Core 0 (PRO CPU)"
+			default n
+        config PCT_PINNED_TO_CORE_1
+            bool "Core 1 (APP CPU)"
+            depends on !FREERTOS_UNICORE
+			default y
+    endchoice
+
+    config PCT_PINNED_TO_CORE
+        int
+        default 0 if PCT_PINNED_TO_CORE_0
+        default 1 if PCT_PINNED_TO_CORE_1
+        default 1
+endmenu
