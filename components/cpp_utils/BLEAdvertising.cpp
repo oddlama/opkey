@@ -5,16 +5,6 @@
  *  Created on: Jun 21, 2017
  *      Author: kolban
  *
-/**
- * Original code from nkolban, licensed under Apache-2.0.
- * (See https://github.com/nkolban/esp32-snippets)
- *
- * Modified by oddlama (oddlama@oddlama.org).
- * All modifications are licensed under The MIT License,
- * a copy of which can be found in the 'LICENSE' file at
- * the project's root directory.
- */
-
  * The ESP-IDF provides a framework for BLE advertising.  It has determined that there are a common set
  * of properties that are advertised and has built a data structure that can be populated by the programmer.
  * This means that the programmer doesn't have to "mess with" the low level construction of a low level
@@ -26,6 +16,16 @@
  * set in the data will be advertised.
  *
  */
+/**
+ * Original code from nkolban, licensed under Apache-2.0.
+ * (See https://github.com/nkolban/esp32-snippets)
+ *
+ * Modified by oddlama (oddlama@oddlama.org).
+ * All modifications are licensed under The MIT License,
+ * a copy of which can be found in the 'LICENSE' file at
+ * the project's root directory.
+ */
+
 #include "sdkconfig.h"
 #if defined(CONFIG_BT_ENABLED)
 #include "BLEAdvertising.h"

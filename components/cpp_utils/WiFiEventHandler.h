@@ -4,16 +4,6 @@
  *  Created on: Feb 25, 2017
  *      Author: kolban
  *
-/**
- * Original code from nkolban, licensed under Apache-2.0.
- * (See https://github.com/nkolban/esp32-snippets)
- *
- * Modified by oddlama (oddlama@oddlama.org).
- * All modifications are licensed under The MIT License,
- * a copy of which can be found in the 'LICENSE' file at
- * the project's root directory.
- */
-
  * A WiFiEventHandler defines a class that has methods that will be called back when a WiFi event is
  * detected.
  *
@@ -45,6 +35,16 @@
  * * esp_err_t staStop()
  * * esp_err_t wifiReady()
  */
+/**
+ * Original code from nkolban, licensed under Apache-2.0.
+ * (See https://github.com/nkolban/esp32-snippets)
+ *
+ * Modified by oddlama (oddlama@oddlama.org).
+ * All modifications are licensed under The MIT License,
+ * a copy of which can be found in the 'LICENSE' file at
+ * the project's root directory.
+ */
+
 
 #ifndef MAIN_WIFIEVENTHANDLER_H_
 #define MAIN_WIFIEVENTHANDLER_H_

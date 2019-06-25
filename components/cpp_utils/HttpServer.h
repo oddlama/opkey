@@ -4,6 +4,9 @@
  *  Created on: Aug 30, 2017
  *      Author: kolban
  *
+ * Implementation of an HTTP server for the ESP32.
+ *
+ */
 /**
  * Original code from nkolban, licensed under Apache-2.0.
  * (See https://github.com/nkolban/esp32-snippets)
@@ -14,9 +17,6 @@
  * the project's root directory.
  */
 
- * Implementation of an HTTP server for the ESP32.
- *
- */
 
 #ifndef COMPONENTS_CPP_UTILS_HTTPSERVER_H_
 #define COMPONENTS_CPP_UTILS_HTTPSERVER_H_
