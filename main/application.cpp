@@ -2,8 +2,11 @@
 #include <array>
 
 #include <driver/adc.h>
+#include <driver/gpio.h>
 #include <esp_adc_cal.h>
 #include <esp_log.h>
+
+#include <WS2812.h>
 
 #include "application.h"
 
@@ -87,29 +90,57 @@ void Application::operator()() {
 		return ival / 100;
 	};
 
+	WS2812 ws2812{GPIO_NUM_17, 7};
+	static int offset = 0.0;
+
 	while (true) {
 		static unsigned long last = 0;
 		//static uint32_t cycles = 0;
 		if (deviceConnected) {
 		} else {
-			auto ReadCh = [&](int c) {
-				int multisample = 1000;//00;
-				int ival = 0;
-				for (int i = 0; i < multisample; ++i) {
-					ival += Sample100(c);
-					//ival += mcp.Read(readChannel[c]);
-				}
-				double val = static_cast<double>(ival) / multisample;
-				return val;
-			};
-			for (int c = 0; c < 8; ++c) {
-				printf("%6.1f (c%d), ", ReadCh(c), c);
+			//for (int i = 0; i < 7; ++i) {
+			//	ws2812.setHSBPixel(i, (offset + (i * 50)) % 360, (offset / 3) % 256, offset % 256);
+			//}
+			//ws2812.show();
+			for (int i = 0; i < 7; ++i) {
+				ws2812.setPixel(i, 0, 0, 0);
 			}
-			printf("\n");
-			auto now = esp_timer_get_time();
-			double frac = 1000000.0 / (now - last);
-			printf("%6.3f ksps (800k in %7.3f sec) multisample per sensor at 480 Hz: %6.3f sps\n", 800.0 * frac, 1.0 / frac, 8000.0 / 9.0 / 48 * frac);
-			last = now;
+			ws2812.setPixel(offset % 7, 255, 255, 255);
+			ws2812.show();
+			++offset;
+			//float a1 = 4.1234;
+			//float a2 = 1.2345;
+			//float a3 = 0;
+			//float t = 0;
+			//int a = -1;
+			//for (int i = 0; i < 100000; ++i) {
+			//	a3 = a1 - a2;
+			//	a1 += a;
+			//	t += a3;
+			//	a = -a;
+			//}
+			//auto now = esp_timer_get_time();
+			//double frac = 1000000.0 / (now - last);
+			//printf("%6.3f flops (100k in %7.3f sec)\n", 100000.0 * frac, 1.0 / frac);
+			//last = now;
+			//auto ReadCh = [&](int c) {
+			//	int multisample = 1000;//00;
+			//	int ival = 0;
+			//	for (int i = 0; i < multisample; ++i) {
+			//		ival += Sample100(c);
+			//		//ival += mcp.Read(readChannel[c]);
+			//	}
+			//	double val = static_cast<double>(ival) / multisample;
+			//	return val;
+			//};
+			//for (int c = 0; c < 8; ++c) {
+			//	printf("%6.1f (c%d), ", ReadCh(c), c);
+			//}
+			//printf("\n");
+			//auto now = esp_timer_get_time();
+			//double frac = 1000000.0 / (now - last);
+			//printf("%6.3f ksps (800k in %7.3f sec) multisample per sensor at 480 Hz: %6.3f sps\n", 800.0 * frac, 1.0 / frac, 8000.0 / 9.0 / 48 * frac);
+			//last = now;
 			//vTaskDelay(1000 / portTICK_PERIOD_MS);
 
 			//spi.init();
@@ -160,6 +191,8 @@ void Application::operator()() {
 			//double diff = val - lastVal;
 			//lastVal = val;
 
+			//printf("val %7.3f diff %+7.3f\n", val, diff);
+
 			//// Print absolute scale
 			//const int termWidth = 200;
 			//const double stepsPerChar = sqrt(static_cast<double>(adcSteps)) / termWidth;
@@ -185,7 +218,7 @@ void Application::operator()() {
 			////printf("write(%d, %s, %d);\n", STDOUT_FILENO, lastChar + 3 * lastCharIndex, 3);
 			////printf("write(%d, %s, %d);\n", STDOUT_FILENO, "\r", 1);
 
-			//vTaskDelay(100 / portTICK_PERIOD_MS);
+			//vTaskDelay(10 / portTICK_PERIOD_MS);
 			// Print delta
 
 			//++cycles;

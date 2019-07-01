@@ -56,7 +56,7 @@ public:
 	void setPixel(uint16_t index, uint32_t pixel);
 	void setHSBPixel(uint16_t index, uint16_t hue, uint8_t saturation, uint8_t brightness);
 	void clear();
-	virtual ~WS2812();
+	~WS2812();
 
 private:
 	char*          colorOrder;

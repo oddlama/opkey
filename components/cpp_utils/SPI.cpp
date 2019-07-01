@@ -119,22 +119,18 @@ void SPI::setHost(spi_host_device_t host) {
  * @param [in] data A data buffer used to send and receive.
  * @param [in] dataLen The number of bytes to transmit and receive.
  */
-void SPI::transfer(uint8_t* data, size_t dataLen) {
-	assert(data != nullptr);
+void SPI::transfer(uint8_t* rxData, uint8_t* txData, size_t dataLen) {
+	assert(rxData != nullptr);
+	assert(txData != nullptr);
 	assert(dataLen > 0);
-#ifdef DEBUG
-	for (auto i = 0; i < dataLen; i++) {
-		ESP_LOGD(LOG_TAG, "> %2d %.2x", i, data[i]);
-	}
-#endif
 	spi_transaction_t trans_desc;
 	//trans_desc.address   = 0;
 	//trans_desc.command   = 0;
 	trans_desc.flags     = 0;
 	trans_desc.length    = dataLen * 8;
 	trans_desc.rxlength  = 0;
-	trans_desc.tx_buffer = data;
-	trans_desc.rx_buffer = data;
+	trans_desc.tx_buffer = txData;
+	trans_desc.rx_buffer = rxData;
 
 	//ESP_LOGI(tag, "... Transferring");
 	esp_err_t rc = ::spi_device_transmit(m_handle, &trans_desc);
@@ -142,6 +138,10 @@ void SPI::transfer(uint8_t* data, size_t dataLen) {
 		ESP_LOGE(LOG_TAG, "transfer:spi_device_transmit: %d", rc);
 	}
 } // transmit
+
+void SPI::transfer(uint8_t* data, size_t dataLen) {
+	transfer(data, data, dataLen);
+}
 
 
 /**

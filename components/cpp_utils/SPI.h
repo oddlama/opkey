@@ -35,6 +35,7 @@ public:
 		);
 	void    setHost(spi_host_device_t host);
 	void    transfer(uint8_t* data, size_t dataLen);
+	void    transfer(uint8_t* rxData, uint8_t* txData, size_t dataLen);
 	uint8_t transferByte(uint8_t value);
 
 	/**
