@@ -1,3 +1,0 @@
-(sym_lib_table
-  (lib (name opmc)(type Legacy)(uri ../opmc.lib)(options "")(descr ""))
-)
