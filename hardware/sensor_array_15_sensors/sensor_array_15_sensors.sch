@@ -1,6 +1,5 @@
 EESchema Schematic File Version 4
 LIBS:sensor_array_15_sensors-cache
-LIBS:sensor_array_13_sensors-cache
 EELAYER 29 0
 EELAYER END
 $Descr A4 11693 8268
@@ -2390,7 +2389,7 @@ F 3 "~" H 10500 4050 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L opmc:ADS7953 U16
+L OpKey:ADS7953 U16
 U 1 1 5D407382
 P 7300 2500
 F 0 "U16" H 6850 3500 50  0000 C CNN

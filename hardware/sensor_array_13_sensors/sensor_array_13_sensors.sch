@@ -2096,7 +2096,7 @@ Wire Notes Line style solid rgb(132, 0, 0)
 	550  6850 550  7450
 Connection ~ 1450 7300
 $Comp
-L opmc:ADS7953 U16
+L OpKey:ADS7953 U16
 U 1 1 5D395C6C
 P 7300 2500
 F 0 "U16" H 6850 3500 50  0000 C CNN
