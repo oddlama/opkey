@@ -110,12 +110,49 @@ void Application::operator()() {
 
 		auto hspi = SpiHost{SpiHost::HostDevice::Hspi, hSpiSclk, hSpiMosi, hSpiMiso, SpiHost::DmaChannel::Dma1};
 		auto vspi = SpiHost{SpiHost::HostDevice::Vspi, vSpiSclk, vSpiMosi, vSpiMiso, SpiHost::DmaChannel::Dma1};
-		auto adc0 = hspi.AddDevice(hSpiCs0, SPI_MASTER_FREQ_20M);
-		auto adc1 = hspi.AddDevice(hSpiCs1, SPI_MASTER_FREQ_20M);
-		auto adc2 = hspi.AddDevice(hSpiCs2, SPI_MASTER_FREQ_20M);
-		auto adc3 = vspi.AddDevice(vSpiCs0, SPI_MASTER_FREQ_20M);
-		auto adc4 = vspi.AddDevice(vSpiCs1, SPI_MASTER_FREQ_20M);
-		auto adc5 = vspi.AddDevice(vSpiCs2, SPI_MASTER_FREQ_20M);
+		auto adcs = std::array
+			{ hspi.AddDevice(hSpiCs0, SPI_MASTER_FREQ_20M)
+			, hspi.AddDevice(hSpiCs1, SPI_MASTER_FREQ_20M)
+			, hspi.AddDevice(hSpiCs2, SPI_MASTER_FREQ_20M)
+			, vspi.AddDevice(vSpiCs0, SPI_MASTER_FREQ_20M)
+			, vspi.AddDevice(vSpiCs1, SPI_MASTER_FREQ_20M)
+			, vspi.AddDevice(vSpiCs2, SPI_MASTER_FREQ_20M)
+			};
+
+		//auto result = make_unique_dma<Ads7953::Result>();
+		//auto commands = make_unique_dma<Commands>();
+
+		// Set Auto1 with full input range
+		auto setModeAuto1 = Ads7953::SetModeAuto1{};
+		setModeAuto1.programSettings = true;
+		setModeAuto1.inputRange = Ads7953::InputRange::Full;
+		//commands->setModeAuto1 = setModeAuto1;
+
+		// Disable CH15
+		auto programModeAuto1 = Ads7953::ProgramModeAuto1{};
+		programModeAuto1.channelMask = 0x7fff;
+		//commands->programModeAuto1 = programModeAuto1;
+
+		//int i = 0;
+		//for (auto& adc : adcs) {
+		//	adc.Transfer(*result, commands->setModeAuto1);
+		//	adc.Transfer(*result, commands->programModeAuto1);
+		//}
+
+		// Prepare continue command
+		//commands->continueOperation = Ads7953::ContinueOperation{};
+
+		auto tx = make_unique_dma<Ads7953::Command>();
+		auto rx = make_unique_dma<Ads7953::Result>();
+		*tx = setModeAuto1;
+		adcs[0].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
+		*tx = programModeAuto1.ToCommand();
+		adcs[0].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
+		*tx = programModeAuto1.AuxCommand();
+		adcs[0].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
+		*tx = Ads7953::ContinueOperation{};
+		adcs[0].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
+		fmt::print("{}\n", rx->data[0], rx->data[1]);
 
 		//std::array<Mcp3208::Command, 8> readChannel{};
 		//for (int c = 0; c < 8; ++c) {
