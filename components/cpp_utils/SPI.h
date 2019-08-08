@@ -24,6 +24,13 @@
  */
 class SPI {
 public:
+	struct Config {
+		int clockSpeedHz;
+		gpio_num_t csPin;
+		gpio_num_t mosiPin;
+		gpio_num_t misoPin;
+		gpio_num_t clkPin;
+	};
 	SPI();
 	virtual ~SPI();
 	void    init(
@@ -33,6 +40,9 @@ public:
 		int misoPin = DEFAULT_MISO_PIN,
 		int clkPin  = DEFAULT_CLK_PIN
 		);
+	void    init(const Config& c) {
+		init(c.clockSpeedHz, c.csPin, c.mosiPin, c.misoPin, c.clkPin);
+	}
 	void    setHost(spi_host_device_t host);
 	void    transfer(uint8_t* data, size_t dataLen);
 	void    transfer(uint8_t* rxData, uint8_t* txData, size_t dataLen);

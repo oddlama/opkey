@@ -12,7 +12,7 @@ extern "C" {
 Application application{};
 
 void app_main() {
-	application.setCore(CONFIG_PCT_PINNED_TO_CORE);
+	application.setCore(CONFIG_OPKEY_PINNED_TO_CORE);
 	application.start();
 
 	// Delete this task

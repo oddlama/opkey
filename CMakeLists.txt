@@ -24,4 +24,4 @@ endif()
 set(WERROR_FLAG -Werror)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(piano-controller)
+project(opkey)

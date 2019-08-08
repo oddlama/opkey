@@ -7,7 +7,7 @@
 
 #include <Task.h>
 
-#include "mcp3208.h"
+#include "ads7953.h"
 
 class Application
 	: public Task
@@ -15,7 +15,7 @@ class Application
 {
 public:
 	Application() noexcept
-		: Task("pctMain", 8192)
+		: Task("OpKey", 8192)
 		, BLEServerCallbacks()
 	{ }
 
@@ -36,5 +36,5 @@ private:
 private:
 	bool deviceConnected = false;
 	BLECharacteristic* characteristic = nullptr;
-	Mcp3208 mcp{};
+	Ads7953 adc{};
 };

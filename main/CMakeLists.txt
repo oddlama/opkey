@@ -1,7 +1,10 @@
 set(COMPONENT_SRCS
 	main.cpp
 	application.cpp
-	mcp3208.cpp)
+	ads7953.cpp
+	spi_host.cpp
+	spi_device.cpp
+	)
 
 set(COMPONENT_ADD_INCLUDEDIRS ".")
 set(COMPONENT_REQUIRES esp_adc_cal cpp_utils)

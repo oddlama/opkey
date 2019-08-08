@@ -38,11 +38,13 @@ SPI::SPI() {
  * @brief Class instance destructor.
  */
 SPI::~SPI() {
-  ESP_LOGI(LOG_TAG, "... Removing device.");
-  ESP_ERROR_CHECK(::spi_bus_remove_device(m_handle));
+	if (m_handle != nullptr) {
+		ESP_LOGI(LOG_TAG, "... Removing device.");
+		ESP_ERROR_CHECK(::spi_bus_remove_device(m_handle));
 
-  ESP_LOGI(LOG_TAG, "... Freeing bus.");
-  ESP_ERROR_CHECK(::spi_bus_free(m_host));
+		ESP_LOGI(LOG_TAG, "... Freeing bus.");
+		ESP_ERROR_CHECK(::spi_bus_free(m_host));
+	}
 }
 
 /**
