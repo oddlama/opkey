@@ -95,6 +95,9 @@ void Application::operator()() {
 		//setvbuf(stdout, nullptr, _IONBF, 0);
 		BLEInit();
 
+		// A little time
+		vTaskDelay(100 / portTICK_PERIOD_MS);
+
 		gpio_num_t hSpiMiso = GPIO_NUM_12;
 		gpio_num_t hSpiMosi = GPIO_NUM_13;
 		gpio_num_t hSpiSclk = GPIO_NUM_14;
@@ -109,14 +112,14 @@ void Application::operator()() {
 		gpio_num_t vSpiCs2  = GPIO_NUM_26;
 
 		auto hspi = SpiHost{SpiHost::HostDevice::Hspi, hSpiSclk, hSpiMosi, hSpiMiso, SpiHost::DmaChannel::Dma1};
-		auto vspi = SpiHost{SpiHost::HostDevice::Vspi, vSpiSclk, vSpiMosi, vSpiMiso, SpiHost::DmaChannel::Dma1};
+		auto vspi = SpiHost{SpiHost::HostDevice::Vspi, vSpiSclk, vSpiMosi, vSpiMiso, SpiHost::DmaChannel::Dma2};
 		auto adcs = std::array
-			{ hspi.AddDevice(hSpiCs0, SPI_MASTER_FREQ_20M)
-			, hspi.AddDevice(hSpiCs1, SPI_MASTER_FREQ_20M)
-			, hspi.AddDevice(hSpiCs2, SPI_MASTER_FREQ_20M)
-			, vspi.AddDevice(vSpiCs0, SPI_MASTER_FREQ_20M)
-			, vspi.AddDevice(vSpiCs1, SPI_MASTER_FREQ_20M)
-			, vspi.AddDevice(vSpiCs2, SPI_MASTER_FREQ_20M)
+			{ hspi.AddDevice(hSpiCs0, SPI_MASTER_FREQ_10M/10)
+			, hspi.AddDevice(hSpiCs1, SPI_MASTER_FREQ_10M/10)
+			, hspi.AddDevice(hSpiCs2, SPI_MASTER_FREQ_10M/10)
+			, vspi.AddDevice(vSpiCs0, SPI_MASTER_FREQ_10M/10)
+			, vspi.AddDevice(vSpiCs1, SPI_MASTER_FREQ_10M/10)
+			, vspi.AddDevice(vSpiCs2, SPI_MASTER_FREQ_10M/10)
 			};
 
 		//auto result = make_unique_dma<Ads7953::Result>();
@@ -144,15 +147,83 @@ void Application::operator()() {
 
 		auto tx = make_unique_dma<Ads7953::Command>();
 		auto rx = make_unique_dma<Ads7953::Result>();
+		for (int i = 0; i < 6; ++i) {
+		fmt::print("Init ADC{}\n", i);
 		*tx = setModeAuto1;
-		adcs[0].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
+		adcs[i].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
+		fmt::print("{:08b} {:08b}\n", rx->data[0], rx->data[1]);
 		*tx = programModeAuto1.ToCommand();
-		adcs[0].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
+		adcs[i].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
+		fmt::print("{:08b} {:08b}\n", rx->data[0], rx->data[1]);
 		*tx = programModeAuto1.AuxCommand();
-		adcs[0].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
+		adcs[i].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
+		fmt::print("{:08b} {:08b}\n", rx->data[0], rx->data[1]);
 		*tx = Ads7953::ContinueOperation{};
-		adcs[0].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
-		fmt::print("{}\n", rx->data[0], rx->data[1]);
+		}
+
+		WS2812 ws2812{GPIO_NUM_32, 143};
+		//static int offset = 0.0;
+
+		std::array<double, 16 * 6> values{};
+		std::array<double, 16 * 6> oldValues{};
+		auto Show = [&] {
+			for (int i = 0; i < 16*6; ++i) {
+				int val = values[i];
+				if (val < 10) {
+					val = 0;
+				}
+				int valdiff = oldValues[i] - values[i];
+				if (valdiff > 0) {
+					ws2812.setPixel(i, 0, 0, valdiff);
+				} else {
+					ws2812.setPixel(i, 0, -valdiff, 0);
+				}
+			}
+			for (int i = 16*6; i < 143; ++i) {
+				ws2812.setPixel(i, 0, 0, 0);
+			}
+			ws2812.show();
+			oldValues = values;
+			for (int i = 0; i < 16 * 6; ++i) {
+				values[i] = 0.0;
+			}
+		};
+		auto ShowConsole = [&] {
+			fmt::print("ADC  CH00  CH01  CH02  CH03  CH04  CH05  CH06  CH07  CH08  CH09  CH10  CH11  CH12  CH13  CH14  CH15\n");
+			for (int i = 0; i < 6; ++i) {
+				fmt::print("{:3d} ", i);
+				for (int j = 0; j < 16; ++j) {
+					fmt::print("{:5.2f} ", values[i*16+j] / 255 * 64 + 0.000001);
+				}
+				fmt::print("\n");
+			}
+			for (int i = 0; i < 16 * 6; ++i) {
+				values[i] = 0.0;
+			}
+			fmt::print("[8A\n");
+		};
+
+		while (true) {
+			//fmt::print("ADC  CH00  CH01  CH02  CH03  CH04  CH05  CH06  CH07  CH08  CH09  CH10  CH11  CH12  CH13  CH14  CH15\n");
+			for (int i = 0; i < 6; ++i) {
+				//fmt::print("{:3d} ", i);
+				for (int j = 0; j < 16; ++j) {
+					adcs[i].Transfer(rx->data.data(), tx->data.data(), tx->data.size());
+					//fmt::print("{:5d} ", rx->GetValue());
+					//fmt::print("{:08b} {:08b}\n", rx->data[0], rx->data[1]);
+					//fmt::print("CH{:01x} = {:5d}\n", rx->GetChannel(), rx->GetValue());
+					values[i*16+rx->GetChannel()] = sqrt(rx->GetValue()) / 64.0 * 255.0;
+					//values[i*16+rx->GetChannel()] = rx->GetValue();
+					//fmt::print("ADC{} chan {:#04x} val {:4d}\n", i, rx->GetChannel(), rx->GetValue());
+				}
+				//fmt::print("\n");
+			}
+			//fmt::print("[8A\n");
+			//fmt::print("[17A\n");
+			Show();
+			//ShowConsole();
+			vTaskDelay(2 / portTICK_PERIOD_MS);
+		}
 
 		//std::array<Mcp3208::Command, 8> readChannel{};
 		//for (int c = 0; c < 8; ++c) {
@@ -262,9 +333,9 @@ void Application::operator()() {
 		//}
 		//}
 
-		WS2812 ws2812{GPIO_NUM_32, 143};
+		//WS2812 ws2812{GPIO_NUM_32, 143};
 		//static int offset = 0.0;
-		static int current = 0;
+		//static int current = 0;
 
 		//while (true) {
 		//	for (int i = 0; i < 143; ++i) {
@@ -472,7 +543,7 @@ void Application::operator()() {
 
 		//heap_caps_free(commandQueue);
 	} catch(std::exception& e) {
-		esp::loge("Caught exception: {}\nAborting.", e.what());
+		esp::loge(LOG_TAG, "Caught exception: {}\nAborting.", e.what());
 		abort();
 	}
 }
