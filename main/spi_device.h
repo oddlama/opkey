@@ -2,25 +2,36 @@
 
 #include <driver/spi_master.h>
 
+
+namespace OpKey {
+
+
 class SpiHost;
 
 class SpiDevice {
 	friend class SpiHost;
 
 private:
-	explicit SpiDevice(spi_device_handle_t&& handle);
+	explicit SpiDevice(std::string name, spi_device_handle_t&& handle);
 
 public:
 	SpiDevice() noexcept = default;
 	~SpiDevice() noexcept;
 
-	SpiDevice(const SpiDevice&) = delete;
-	SpiDevice(SpiDevice&& other) noexcept = default;
-	SpiDevice& operator=(const SpiDevice&) = delete;
-	SpiDevice& operator=(SpiDevice&& other) noexcept = default;
+	SpiDevice(SpiDevice&& other) noexcept;
+	SpiDevice& operator=(SpiDevice&& other) noexcept;
 
-	void Transfer(uint8_t* rxData, uint8_t* txData, size_t len);
+	SpiDevice(const SpiDevice&) = delete;
+	SpiDevice& operator=(const SpiDevice&) = delete;
+
+	const std::string& GetName() const noexcept { return name; }
+
+	void Transfer(uint8_t* rxData, size_t rxLen, uint8_t* txData, size_t txLen);
 
 private:
 	spi_device_handle_t handle = nullptr;
+	std::string name{};
 };
+
+
+} // namespace OpKey

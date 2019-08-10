@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include <chrono>
 #include <memory>
 #include <array>
 #include <vector>
@@ -11,6 +12,8 @@
 #include <driver/gpio.h>
 #include <esp_adc_cal.h>
 #include <esp_log.h>
+
+#include "config.h"
 
 #define FMT_HEADER_ONLY
 #pragma GCC diagnostic push

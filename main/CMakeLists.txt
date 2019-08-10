@@ -1,7 +1,6 @@
 set(COMPONENT_SRCS
 	main.cpp
 	application.cpp
-	ads7953.cpp
 	spi_host.cpp
 	spi_device.cpp
 	)

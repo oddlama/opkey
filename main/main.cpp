@@ -2,17 +2,17 @@
 #include <FreeRTOS.h>
 #include <freertos/task.h>
 
-#include "sdkconfig.h"
+#include "common.h"
 #include "application.h"
 
 extern "C" {
 	void app_main();
 }
 
-Application application{};
+OpKey::Application application{};
 
 void app_main() {
-	application.setCore(CONFIG_OPKEY_PINNED_TO_CORE);
+	application.setCore(OpKey::Config::Core);
 	application.start();
 
 	// Delete this task
