@@ -1,11 +1,11 @@
 #pragma once
 
-#include <array>
+#include "sdkconfig.h"
 
 #include <driver/gpio.h>
 #include <driver/spi_master.h>
 
-#include "sdkconfig.h"
+#include <array>
 
 
 namespace OpKey::Config {

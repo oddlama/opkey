@@ -1,11 +1,6 @@
 #pragma once
 
-#include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEServer.h>
-#include <BLE2902.h>
 #include <WS2812.h>
-#include <Task.h>
 
 #include "spi_host.h"
 #include "spi_device.h"
@@ -16,30 +11,39 @@
 namespace OpKey {
 
 
-class Application
-	: public Task
-	, public BLEServerCallbacks
-{
-	enum class Mode {
-		Run,
-		Calibrate
-	};
-
+class Application {
 public:
-	Application() noexcept
-		: Task("OpKey", 8192)
-		, BLEServerCallbacks()
-	{ }
+	Application() noexcept = default;
 
 	Application(const Application&) = delete;
 	Application(Application&&) = delete;
 	Application& operator=(const Application&) = delete;
 	Application& operator=(Application&&) = delete;
 
-	using BLEServerCallbacks::onConnect;
-	void onConnect(BLEServer* pServer) override;
-	void onDisconnect(BLEServer* pServer) override;
-	void run(void*) override { (*this)(); }
+	/**
+	 * The main function for the application task.
+	 */
+	[[noreturn]] static void TaskMain(void*) {
+		try {
+			Application{}();
+		} catch(std::exception& e) {
+			esp::loge(LOG_TAG, "Caught exception: {}\nAborting.", e.what());
+			abort();
+		} catch(...) {
+			esp::loge(LOG_TAG, "Caught unkown exception type\nAborting.");
+			abort();
+		}
+		esp::loge(LOG_TAG, "Fatal: Application thread returned!\nAborting.");
+		abort();
+	}
+
+	/**
+	 * Starts a new task for the application
+	 */
+	static void StartTask() {
+		xTaskHandle taskHandle = nullptr;
+		xTaskCreatePinnedToCore(&TaskMain, "OpKey", 8192, nullptr, 0, &taskHandle, OpKey::Config::Core);
+	}
 
 private:
 	void operator()();
@@ -52,17 +56,20 @@ private:
 	void Calibrate();
 
 private:
-	// BLE
-	bool deviceConnected = false;
-	BLECharacteristic* characteristic = nullptr;
+#ifdef ENABLE_PROFILING
+	DummyProfiler profiler{};
+#else
+	Profiler profiler{};
+#endif
+
+	Config config{};
 
 	// Statistics
 	std::chrono::steady_clock::time_point lastStatisticPrint{};
 	uint32_t operationCounter = 0;
 	uint32_t bleEventCounter = 0;
 
-	// Mode and settings
-	Mode mode = Mode::Run;
+	// Settings
 	size_t multisamples = Config::DefaultMultisamples;
 
 	// Spi

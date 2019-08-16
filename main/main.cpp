@@ -9,12 +9,9 @@ extern "C" {
 	void app_main();
 }
 
-OpKey::Application application{};
-
 void app_main() {
-	application.setCore(OpKey::Config::Core);
-	application.start();
+	OpKey::Application::StartTask();
 
-	// Delete this task
+	// Delete this initial task
 	FreeRTOS::deleteTask();
 }

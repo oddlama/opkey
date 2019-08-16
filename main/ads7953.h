@@ -1,8 +1,8 @@
 #pragma once
 
-#include <array>
-
 #include "spi_device.h"
+
+#include <array>
 
 
 namespace OpKey::Ads7953 {

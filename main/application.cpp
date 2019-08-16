@@ -1,7 +1,7 @@
-#include <driver/adc.h>
-
-#include "common.h"
 #include "application.h"
+#include "common.h"
+
+#include <driver/adc.h>
 
 
 namespace OpKey {
@@ -9,8 +9,6 @@ namespace OpKey {
 
 static const char* LOG_TAG = "OpKey";
 
-#define SERVICE_UUID        "03b80e5a-ede8-4b33-a751-6ce34ec4c700"
-#define CHARACTERISTIC_UUID "7772e5db-3868-4112-a1a9-f2669d106bf3"
 
 template<typename T>
 T* DmaMalloc(size_t size) {
@@ -48,50 +46,16 @@ uint8_t midiPacket[] = {
 	0x00   // velocity
 };
 
-void Application::onConnect(BLEServer* server) {
-	esp::logi(LOG_TAG, "BLE connected");
-	deviceConnected = true;
-	resume();
-}
-
-void Application::onDisconnect(BLEServer* server) {
-	esp::logi(LOG_TAG, "BLE disconnected");
-	deviceConnected = false;
-}
-
-void Application::InitBle() {
-	esp::logi(LOG_TAG, "Initializing BLE");
-	BLEDevice::init("OpKey");
-
-	// Create the BLE Server
-	BLEServer* server = BLEDevice::createServer();
-	server->setCallbacks(this);
-
-	// Create the BLE Service
-	BLEService* service = server->createService(BLEUUID(SERVICE_UUID));
-
-	// Create a BLE Characteristic
-	characteristic = service->createCharacteristic
-		( BLEUUID(CHARACTERISTIC_UUID)
-		, BLECharacteristic::PROPERTY_READ
-			| BLECharacteristic::PROPERTY_WRITE
-			| BLECharacteristic::PROPERTY_NOTIFY
-			| BLECharacteristic::PROPERTY_WRITE_NR
-		);
-
-	// https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
-	// Create a BLE Descriptor
-	characteristic->addDescriptor(new BLE2902());
-
-	// Start the service
-	service->start();
-
-	// Start advertising
-	BLEAdvertising* advertising = server->getAdvertising();
-	advertising->addServiceUUID(service->getUUID());
-	advertising->start();
-	esp::logi(LOG_TAG, "BLE advertising");
-}
+//void Application::onConnect(BLEServer* server) {
+//	esp::logi(LOG_TAG, "BLE connected");
+//	deviceConnected = true;
+//	resume();
+//}
+//
+//void Application::onDisconnect(BLEServer* server) {
+//	esp::logi(LOG_TAG, "BLE disconnected");
+//	deviceConnected = false;
+//}
 
 void Application::InitSpi() {
 	esp::logi(LOG_TAG, "Initializing SPI");
@@ -150,17 +114,18 @@ void Application::InitAdcs() {
 	// TODO prepare command DMA buffers
 }
 
+std::array<uint32_t, Config::NumAdcs * Config::NumChannels> channelValues{};
+
 void Application::Run() {
 	// TODO BAAAAAAAAAAAH! static
 	static auto tx = make_unique_dma<Ads7953::Command>();
 	static auto rx = make_unique_dma<Ads7953::Result>();
 	*tx = Ads7953::ContinueOperation{}.ToCommand();
 
-	std::array<uint32_t, Config::NumAdcs * Config::NumChannels> channelValues{};
+	channelValues = {};
 
 	for (int s = 0; s < multisamples; ++s) {
 		for (int a = 0; a < Config::NumAdcs; ++a) {
-			if (a == 3) continue;
 			for (int c = 0; c < Config::NumChannels; ++c) {
 				adcs[a].Transfer(rx->data.data(), rx->data.size(), tx->data.data(), tx->data.size());
 				channelValues[a * Config::NumChannels + rx->GetChannel()] += rx->GetValue();
@@ -171,13 +136,18 @@ void Application::Run() {
 	for (int i = 0; i < Config::NumAdcs * Config::NumChannels; ++i) {
 		double val = channelValues[i];
 		val /= multisamples;
-		val = sqrt(val) / 64 * 255.0;
+		val = sqrt(val) / 64 * 256.0 * 3;
 
+		int r = 0, g = 0, b = 0;
 		int v = val;
-		if (v < 10) {
-			v = 0;
-		} else if (v > 255) {
-			v = 255;
+		if (v <= 256 * 0 + 255) {
+			r = (v - 256 * 0) / 10;
+		} else if (v < 256 * 1 + 255) {
+			g = v - 256 * 1;
+		} else if (v < 256 * 2 + 255) {
+			b = v - 256 * 2;
+		} else {
+			r = g = b = 20;
 		}
 
 		//int valdiff = oldValues[i] - values[i];
@@ -186,7 +156,7 @@ void Application::Run() {
 		//} else {
 		//	ws2812.setPixel(i, 0, -valdiff, 0);
 		//}
-		ws2812.setPixel(i, 0, v / 2, v);
+		ws2812.setPixel(i, r, g, b);
 	}
 	ws2812.show();
 
@@ -198,6 +168,18 @@ void Application::RunStatistics() {
 	auto now = std::chrono::steady_clock::now();
 	double secondsSinceLastPrint = std::chrono::duration_cast<std::chrono::duration<double>>(now - lastStatisticPrint).count();
 	if (secondsSinceLastPrint >= 1.0) {
+		fmt::print("ADC  CH00  CH01  CH02  CH03  CH04  CH05  CH06  CH07  CH08  CH09  CH10  CH11  CH12  CH13  CH14  CH15\n");
+		for (int i = 0; i < Config::NumAdcs; ++i) {
+			fmt::print("{:3d} ", i);
+			for (int j = 0; j < Config::NumChannels; ++j) {
+				double val = channelValues[i*Config::NumChannels+j];
+				val /= multisamples;
+				val = sqrt(val);
+				fmt::print("{:5.2f} ", val + 0.00001);
+			}
+			fmt::print("\n");
+		}
+
 		constexpr const size_t monitoredChannels = Config::NumChannels * Config::NumAdcs;
 
 		double effectiveSamplingRate = operationCounter / secondsSinceLastPrint;
@@ -217,6 +199,8 @@ void Application::RunStatistics() {
 		operationCounter = 0;
 		bleEventCounter = 0;
 		lastStatisticPrint = std::chrono::steady_clock::now();
+
+		fmt::print("[15A\n");
 	}
 }
 
@@ -225,79 +209,166 @@ void Application::Calibrate() {
 }
 
 void Application::operator()() {
-	try {
-		InitBle();
-		// A little time
-		vTaskDelay(100 / portTICK_PERIOD_MS);
-		InitSpi();
-		InitAdcs();
+	struct ProfilerSectionGuard {
+		explicit ProfilerSectionGuard() noexcept {
+			profiler.
+		}
+		~ProfilerSectionGuard() noexcept {
+		}
+	};
 
-		lastStatisticPrint = std::chrono::steady_clock::now();
+	{
+		auto pg = profiler("init");
 
-		// TODO remove
-		esp::loge(LOG_TAG, "REMOVE DEBUG");
-		multisamples = 1;
+		Config config{};
+		Statistics statistics{};
 
-		while (true) {
-			switch (mode) {
-				case Mode::Run:
-					Run();
-					break;
+		auto SensorData = std::make_unique<SensorData>(*this);
 
-				case Mode::Calibrate:
-					Calibrate();
-					break;
+		BleController ble{*this};
+		AdcController adcController{*this};
+		Visualizer visualizer{*this};
+	}
+
+	profiler.PrintSummary();
+	profiler.Reset();
+
+	while (true) {
+		// accumulate profiling results (e.g. mean, stddev)
+		profiler.Accumulate();
+
+		if (every 10 seconds) {
+			// TODO print:
+			//           total|of parent category|min total|max total
+			//             min   max    mean
+			//           [10us, 50us, 30us±5us]
+			//
+			//           total|of parent category
+			//
+			//   percieved time: {}, actual time: {}
+			//
+			//           [min(min) max(max) mean(mean)±std(std)] [min(min) max(max) mean(mean)±std(std)]
+			//   - main: 100% () 100% (450us)
+			//     - abc: 80% () 80% (of main) (350us) ± 3% (35us) min: 50%, max: 85%, mean: 
+			//       - 1: 40% () 50% (of abc)
+			//       - 2: 20% () 25% (of abc)
+			//       - 3: 20% () 25% (of abc)
+			//     - abc2: 20%
+			profiler.PrintSummary();
+			profiler.Reset();
+		}
+	}
+
+	struct AdcController {
+		void OnKeyPressed(Key key, double velocity, ) {
+			invalid = true;
+		}
+		void OnKeyReleased(Key key, ) {
+			invalid = true;
+		}
+		void Tick() {
+			key
+			if (invalid || lastUpdate - now > updateDelayOrFrequencyOrSo) {
+				invalid = false;
+
+				show();
 			}
 		}
+		history = {};
+	};
 
-		// start auxiliary thread (visualization, non realtime stuff, other cpu.)
+	struct Visualizer {
+		void OnKeyPressed(Key key, double velocity, ) {
+			invalid = true;
+		}
+		void OnKeyReleased(Key key, ) {
+			invalid = true;
+		}
+		void Tick() {
+			if (invalid || lastUpdate - now > updateDelayOrFrequencyOrSo) {
+				invalid = false;
 
-		//init adcs
-		//prepare dma command and result queues for both dma channels
-		//	//for nsamples:
-		//	//	for adc : adcs
-		//	//		retrieve Config::NumChannels samples (full readout)
-		//	//	average samples
+				show();
+			}
+		}
+	};
 
-		//while true:
-		//	switch mode:
-		//		calibrate:
-		//			//init all LEDs red
-		//			//led[all keys + pedals???] = Color::calibrateMinimum;
-		//			for 2 seconds:
-		//				record min values,
-		//				average normal min values,
 
-		//			//led[all keys + pedals???] = Color::calibratedMaximum;
-		//			until all keys ready and (press finish???):
-		//				record max values
-		//				average normal max value (only register values > threshold?
-		//				//led[calibrated key with >1000 good samples] = Color::keyCalibrated;
 
-		//		run:
-		//			std::array<Keytable, N> processing buffer
-		//			queue = pointer to tables.
 
-		//			send prepared dma buffers
-		//			average samples for each key
-		//			* apply calibration
-		//			busy wait for empty processing queue slot
-		//			swap pointer in queue
+	InitBle();
+	// A little time
+	vTaskDelay(100 / portTICK_PERIOD_MS);
+	InitVisualizer();
+	InitSpi();
+	InitAdcs();
 
-		//			velocity = calculate difference to last sample
-		//			acceleration = calculate difference to last velocity
+	config.Load();
 
-		//			if acceleration is negative:
-		//				if velocity > threshold:
-		//					if position > threshold:
-		//						send key down:
+	lastStatisticPrint = std::chrono::steady_clock::now();
 
-		//			if position < minthreshold:
-		//				send key up.
-	} catch(std::exception& e) {
-		esp::loge(LOG_TAG, "Caught exception: {}\nAborting.", e.what());
-		abort();
+	// TODO remove
+	esp::loge(LOG_TAG, "REMOVE DEBUG");
+	multisamples = 1;
+
+	while (true) {
+		now = ;
+		adcController.Tick(now);
+		//in adcController: if (calibrate) {
+		//	calibrator.........
+		//}
+		visualizer.Tick(now);
+		//if (timeSinceLastVisualize > vizualizationRate) {
+		//}
+		Run();
+		// TODO calibrate = true;
+		// vizualizer.style = CalibrationVisualizer{};
 	}
+
+	// start auxiliary thread (visualization, non realtime stuff, other cpu.)
+
+	//init adcs
+	//prepare dma command and result queues for both dma channels
+	//	//for nsamples:
+	//	//	for adc : adcs
+	//	//		retrieve Config::NumChannels samples (full readout)
+	//	//	average samples
+
+	//while true:
+	//	switch mode:
+	//		calibrate:
+	//			//init all LEDs red
+	//			//led[all keys + pedals???] = Color::calibrateMinimum;
+	//			for 2 seconds:
+	//				record min values,
+	//				average normal min values,
+
+	//			//led[all keys + pedals???] = Color::calibratedMaximum;
+	//			until all keys ready and (press finish???):
+	//				record max values
+	//				average normal max value (only register values > threshold?
+	//				//led[calibrated key with >1000 good samples] = Color::keyCalibrated;
+
+	//		run:
+	//			std::array<Keytable, N> processing buffer
+	//			queue = pointer to tables.
+
+	//			send prepared dma buffers
+	//			average samples for each key
+	//			* apply calibration
+	//			busy wait for empty processing queue slot
+	//			swap pointer in queue
+
+	//			velocity = calculate difference to last sample
+	//			acceleration = calculate difference to last velocity
+
+	//			if acceleration is negative:
+	//				if velocity > threshold:
+	//					if position > threshold:
+	//						send key down:
+
+	//			if position < minthreshold:
+	//				send key up.
 }
 
 
