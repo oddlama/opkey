@@ -1,19 +1,6 @@
 #pragma once
 
-#include <cmath>
-
-#include <chrono>
-#include <memory>
-#include <array>
-#include <vector>
-#include <string>
-#include <string_view>
-
-#include <driver/gpio.h>
-#include <esp_adc_cal.h>
 #include <esp_log.h>
-
-#include "config.h"
 
 #define FMT_HEADER_ONLY
 #pragma GCC diagnostic push
@@ -22,6 +9,7 @@
 #pragma GCC diagnostic ignored "-Wctor-dtor-privacy"
 #include "fmt/format.h"
 #pragma GCC diagnostic pop
+
 
 using namespace fmt::literals;
 

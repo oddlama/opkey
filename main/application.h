@@ -1,10 +1,12 @@
 #pragma once
 
-#include <WS2812.h>
-
-#include "spi_host.h"
-#include "spi_device.h"
-#include "ads7953.h"
+#include "config.h"
+#include "settings.h"
+#include "profiler.h"
+#include "statistics.h"
+#include "adc_controller.h"
+#include "ble_server.h"
+#include "visualizer.h"
 
 
 
@@ -48,37 +50,30 @@ public:
 private:
 	void operator()();
 	void InitBle();
-	void InitSpi();
-	void InitAdcs();
 
 	void Run();
 	void RunStatistics();
 	void Calibrate();
 
 private:
+	// Persistent application settings
+	Settings settings{};
+
+	// Housekeeping components
 #ifdef ENABLE_PROFILING
 	DummyProfiler profiler{};
 #else
 	Profiler profiler{};
 #endif
+	Statistics statistics{};
 
-	Config config{};
+	// The sensor data history
+	SensorHistory history{};
 
-	// Statistics
-	std::chrono::steady_clock::time_point lastStatisticPrint{};
-	uint32_t operationCounter = 0;
-	uint32_t bleEventCounter = 0;
-
-	// Settings
-	size_t multisamples = Config::DefaultMultisamples;
-
-	// Spi
-	SpiHost hspi{};
-	SpiHost vspi{};
-	std::array<SpiDevice, Config::NumAdcs> adcs{};
-
-	// Leds
-	WS2812 ws2812{GPIO_NUM_32, 143};
+	// Different components
+	AdcController adcController{*this};
+	BleServer bleServer{*this};
+	Visualizer visualizer{*this};
 };
 
 

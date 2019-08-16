@@ -1,40 +1,12 @@
 #include "application.h"
-#include "common.h"
 
-#include <driver/adc.h>
+#include "dma.h"
 
 
 namespace OpKey {
 
 
 static const char* LOG_TAG = "OpKey";
-
-
-template<typename T>
-T* DmaMalloc(size_t size) {
-	return static_cast<T*>(heap_caps_malloc(size, MALLOC_CAP_DMA));
-}
-
-template<typename T, typename... Args>
-T* DmaNew(Args&&... args) {
-	T* t = DmaMalloc<T>(sizeof(T));
-	new(t) T(std::forward<Args>(args)...);
-	return t;
-}
-
-struct DmaDelete {
-	void operator()(void* ptr) {
-		heap_caps_free(ptr);
-	}
-};
-
-template<typename T>
-using unique_ptr_dma = std::unique_ptr<T, DmaDelete>;
-
-template<typename T, typename... Args>
-unique_ptr_dma<T> make_unique_dma(Args&&... args) {
-	return unique_ptr_dma<T>(DmaNew<T>(std::forward<Args>(args)...));
-}
 
 
 
@@ -56,63 +28,6 @@ uint8_t midiPacket[] = {
 //	esp::logi(LOG_TAG, "BLE disconnected");
 //	deviceConnected = false;
 //}
-
-void Application::InitSpi() {
-	esp::logi(LOG_TAG, "Initializing SPI");
-	hspi = SpiHost
-		{ "hspi"
-		, SpiHost::HostDevice::Hspi
-		, Config::hspi.pinSclk
-		, Config::hspi.pinMosi
-		, Config::hspi.pinMiso
-		, SpiHost::DmaChannel::Dma1
-		};
-
-	vspi = SpiHost
-		{ "vspi"
-		, SpiHost::HostDevice::Vspi
-		, Config::vspi.pinSclk
-		, Config::vspi.pinMosi
-		, Config::vspi.pinMiso
-		, SpiHost::DmaChannel::Dma2
-		};
-
-	adcs =
-		{ hspi.AddDevice("adc0", Config::hspi.pinCs[0], Config::SpiFrequency)
-		, hspi.AddDevice("adc1", Config::hspi.pinCs[1], Config::SpiFrequency)
-		, hspi.AddDevice("adc2", Config::hspi.pinCs[2], Config::SpiFrequency)
-		, vspi.AddDevice("adc3", Config::vspi.pinCs[0], Config::SpiFrequency)
-		, vspi.AddDevice("adc4", Config::vspi.pinCs[1], Config::SpiFrequency)
-		, vspi.AddDevice("adc5", Config::vspi.pinCs[2], Config::SpiFrequency)
-		};
-}
-
-void Application::InitAdcs() {
-	esp::logi(LOG_TAG, "Initializing SPI ADCs");
-
-	// Set mode to Auto1 with full input range
-	auto setModeAuto1 = Ads7953::SetModeAuto1{};
-	setModeAuto1.programSettings = true;
-	setModeAuto1.inputRange = Ads7953::InputRange::Full;
-
-	// Disable reading CH15
-	auto programModeAuto1 = Ads7953::ProgramModeAuto1{};
-	programModeAuto1.channelMask = 0x7fff;
-
-	auto tx = make_unique_dma<Ads7953::Command>();
-	auto rx = make_unique_dma<Ads7953::Result>();
-	for (auto& adc : adcs) {
-		fmt::print("Initializing '{}'\n", adc.GetName());
-		Ads7953::Transfer(adc, *rx, *tx, setModeAuto1);
-		fmt::print("{:08b} {:08b}\n", rx->data[0], rx->data[1]);
-		Ads7953::Transfer(adc, *rx, *tx, programModeAuto1);
-		fmt::print("{:08b} {:08b}\n", rx->data[0], rx->data[1]);
-		// TODO show error when module is not responding!!!!!!!!!!!!
-		// (make a reliable alive check e.g. polling 20 times or so and checking for reasonable result)
-	}
-
-	// TODO prepare command DMA buffers
-}
 
 std::array<uint32_t, Config::NumAdcs * Config::NumChannels> channelValues{};
 
@@ -209,28 +124,6 @@ void Application::Calibrate() {
 }
 
 void Application::operator()() {
-	struct ProfilerSectionGuard {
-		explicit ProfilerSectionGuard() noexcept {
-			profiler.
-		}
-		~ProfilerSectionGuard() noexcept {
-		}
-	};
-
-	{
-		auto pg = profiler("init");
-
-		Config config{};
-		Statistics statistics{};
-
-		auto SensorData = std::make_unique<SensorData>(*this);
-
-		BleController ble{*this};
-		AdcController adcController{*this};
-		Visualizer visualizer{*this};
-	}
-
-	profiler.PrintSummary();
 	profiler.Reset();
 
 	while (true) {
@@ -259,47 +152,12 @@ void Application::operator()() {
 		}
 	}
 
-	struct AdcController {
-		void OnKeyPressed(Key key, double velocity, ) {
-			invalid = true;
-		}
-		void OnKeyReleased(Key key, ) {
-			invalid = true;
-		}
-		void Tick() {
-			key
-			if (invalid || lastUpdate - now > updateDelayOrFrequencyOrSo) {
-				invalid = false;
-
-				show();
-			}
-		}
-		history = {};
-	};
-
-	struct Visualizer {
-		void OnKeyPressed(Key key, double velocity, ) {
-			invalid = true;
-		}
-		void OnKeyReleased(Key key, ) {
-			invalid = true;
-		}
-		void Tick() {
-			if (invalid || lastUpdate - now > updateDelayOrFrequencyOrSo) {
-				invalid = false;
-
-				show();
-			}
-		}
-	};
-
 
 
 
 	InitBle();
 	// A little time
 	vTaskDelay(100 / portTICK_PERIOD_MS);
-	InitVisualizer();
 	InitSpi();
 	InitAdcs();
 

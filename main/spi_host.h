@@ -1,7 +1,9 @@
 #pragma once
 
-#include <driver/spi_master.h>
+#include "dma.h"
 #include "spi_device.h"
+
+#include <driver/spi_master.h>
 
 
 namespace OpKey {
@@ -13,12 +15,6 @@ public:
 		None,
 		Hspi,
 		Vspi,
-	};
-
-	enum class DmaChannel {
-		None = 0,
-		Dma1 = 1,
-		Dma2 = 2,
 	};
 
 public:
