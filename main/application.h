@@ -1,5 +1,6 @@
 #pragma once
 
+#include "exception.h"
 #include "fmt.h"
 #include "config.h"
 #include "settings.h"
@@ -34,6 +35,11 @@ public:
 	[[noreturn]] static void TaskMain(void*) {
 		try {
 			Application{}();
+		} catch(OpKeyException& e) {
+			esp::loge("Caught exception: {}\nDevice will abort() and restart in 60 seconds.", e.what());
+			// TODO start visualizer loop to notify user.
+			vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+			abort();
 		} catch(std::exception& e) {
 			esp::loge("Caught exception: {}\nAborting.", e.what());
 			abort();

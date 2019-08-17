@@ -2,6 +2,7 @@
 #include "application.h"
 #include "ads7953.h"
 #include "fmt.h"
+#include "exception.h"
 
 
 namespace OpKey {
@@ -77,6 +78,24 @@ void AdcController::InitAdcs() {
 		fmt::print("{:08b} {:08b}\n", rx->data[0], rx->data[1]);
 		// TODO show error when module is not responding!!!!!!!!!!!!
 		// (make a reliable alive check e.g. polling 20 times or so and checking for reasonable result)
+	}
+
+	// Continue operation message
+	auto continueOperation = Ads7953::ContinueOperation{};
+
+	// Check that every adc is online and correctly
+	// programmed by verifying a two full cycles
+	for (auto& adc : adcs) {
+		Ads7953::Transfer(adc, *rx, *tx, continueOperation);
+		int channel = rx->GetChannel();
+		for (int i = 0; i < 2 * 15; ++i) {
+			int expectedChannel = (channel + 1) % 15;
+			Ads7953::Transfer(adc, *rx, *tx, continueOperation);
+			if (rx->GetChannel() != expectedChannel) {
+				throw OpKeyException("Initialization error: '{}' returned invalid data"_format(adc.GetName()));
+			}
+			channel = expectedChannel;
+		}
 	}
 
 	// TODO prepare command DMA buffers

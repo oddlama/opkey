@@ -8,7 +8,7 @@ set(COMPONENT_SRCS
 	)
 
 set(COMPONENT_ADD_INCLUDEDIRS ".")
-set(COMPONENT_REQUIRES esp_adc_cal cpp_utils)
+#set(COMPONENT_REQUIRES nvs)
 
 register_component()
 
