@@ -1,4 +1,13 @@
-#include <heap/include/esp_heap_caps_init.h>
+#pragma once
+
+#include <freertos/FreeRTOS.h>
+#include <esp_system.h>
+
+#include <algorithm>
+#include <memory>
+
+#include <cstdio>
+#include <cstdlib>
 
 
 namespace OpKey {

@@ -1,13 +1,17 @@
 #pragma once
 
+#include "fmt.h"
 #include "config.h"
 #include "settings.h"
 #include "profiler.h"
-#include "statistics.h"
+#include "sensor_history.h"
 #include "adc_controller.h"
 #include "ble_server.h"
 #include "visualizer.h"
+#include "statistics.h"
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 
 namespace OpKey {
@@ -15,12 +19,14 @@ namespace OpKey {
 
 class Application {
 public:
-	Application() noexcept = default;
+	Application() = default;
 
 	Application(const Application&) = delete;
 	Application(Application&&) = delete;
 	Application& operator=(const Application&) = delete;
 	Application& operator=(Application&&) = delete;
+
+	auto& GetProfiler() noexcept { return profiler; }
 
 	/**
 	 * The main function for the application task.
@@ -29,13 +35,13 @@ public:
 		try {
 			Application{}();
 		} catch(std::exception& e) {
-			esp::loge(LOG_TAG, "Caught exception: {}\nAborting.", e.what());
+			esp::loge("Caught exception: {}\nAborting.", e.what());
 			abort();
 		} catch(...) {
-			esp::loge(LOG_TAG, "Caught unkown exception type\nAborting.");
+			esp::loge("Caught unkown exception type\nAborting.");
 			abort();
 		}
-		esp::loge(LOG_TAG, "Fatal: Application thread returned!\nAborting.");
+		esp::loge("Fatal: Application thread returned!\nAborting.");
 		abort();
 	}
 
@@ -47,33 +53,28 @@ public:
 		xTaskCreatePinnedToCore(&TaskMain, "OpKey", 8192, nullptr, 0, &taskHandle, OpKey::Config::Core);
 	}
 
-private:
 	void operator()();
-	void InitBle();
-
-	void Run();
-	void RunStatistics();
-	void Calibrate();
 
 private:
 	// Persistent application settings
 	Settings settings{};
 
-	// Housekeeping components
-#ifdef ENABLE_PROFILING
-	DummyProfiler profiler{};
-#else
+	// Profiling
+	// TODO ifdef
+//#ifdef ENABLE_PROFILING
 	Profiler profiler{};
-#endif
-	Statistics statistics{};
+//#else
+//	DummyProfiler profiler{};
+//#endif
 
 	// The sensor data history
-	SensorHistory history{};
+	SensorHistory<5> history{};
 
 	// Different components
 	AdcController adcController{*this};
 	BleServer bleServer{*this};
 	Visualizer visualizer{*this};
+	Statistics statistics{*this};
 };
 
 

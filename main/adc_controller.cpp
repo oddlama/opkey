@@ -1,24 +1,30 @@
 #include "adc_controller.h"
 #include "application.h"
 #include "ads7953.h"
+#include "fmt.h"
 
 
 namespace OpKey {
 
 
+#define CONCAT_IMPL(x, y) x##y
+#define MACRO_CONCAT(x, y) CONCAT_IMPL(x, y)
+#define PROFILE_SCOPE(name) auto MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = application.GetProfiler()(name)
+#define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCTION__)
+
+
 AdcController::AdcController(Application& application)
 	: application(application)
 {
-	PROFILE_FUNC(application.GetProfiler());
-
+	PROFILE_FUNCTION();
 	InitSpi();
 	InitAdcs();
 }
 
 
 void AdcController::InitSpi() {
-	PROFILE_FUNC(application.GetProfiler());
-	esp::logi(LOG_TAG, "Initializing SPI");
+	PROFILE_FUNCTION();
+	esp::logi("Initializing SPI");
 
 	hspi = SpiHost
 		{ "hspi"
@@ -49,8 +55,8 @@ void AdcController::InitSpi() {
 }
 
 void AdcController::InitAdcs() {
-	PROFILE_FUNC(application.GetProfiler());
-	esp::logi(LOG_TAG, "Initializing SPI ADCs");
+	PROFILE_FUNCTION();
+	esp::logi("Initializing SPI ADCs");
 
 	// Set mode to Auto1 with full input range
 	auto setModeAuto1 = Ads7953::SetModeAuto1{};
@@ -75,6 +81,12 @@ void AdcController::InitAdcs() {
 
 	// TODO prepare command DMA buffers
 }
+
+
+#undef CONCAT_IMPL
+#undef MACRO_CONCAT
+#undef PROFILE_SCOPE
+#undef PROFILE_FUNCTION
 
 
 } // namespace OpKey

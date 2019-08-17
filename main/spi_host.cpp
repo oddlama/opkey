@@ -1,11 +1,9 @@
-#include "common.h"
 #include "spi_host.h"
+#include "fmt.h"
 
 
 namespace OpKey {
 
-
-static const char* LOG_TAG = "OpKey.SpiHost";
 
 SpiHost::SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gpio_num_t pinMosi, gpio_num_t pinMiso, DmaChannel dmaChannel)
 	: initialized(true)
@@ -35,11 +33,11 @@ SpiHost::SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gp
 
 	auto errRc = spi_bus_initialize(this->hostDevice, &busConfig, static_cast<int>(dmaChannel));
 	if (errRc != ESP_OK) {
-		esp::loge(LOG_TAG, "spi_bus_initialize() returned {}", errRc);
+		esp::loge("spi_bus_initialize() returned {}", errRc);
 		throw std::runtime_error("spi_bus_initialize() returned {}"_format(errRc));
 	}
 
-	esp::logi(LOG_TAG, "Initialized SpiHost{{name='{}', hostDevice={}, pinSclk={}, pinMosi={}, pinMiso={}}}"
+	esp::logi("Initialized SpiHost{{name='{}', hostDevice={}, pinSclk={}, pinMosi={}, pinMiso={}}}"
 		, this->name
 		, hostDevice
 		, static_cast<int>(pinSclk)
@@ -51,7 +49,7 @@ SpiHost::SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gp
 SpiHost::~SpiHost() noexcept {
 	if (initialized) {
 		ESP_ERROR_CHECK(spi_bus_free(hostDevice));
-		esp::logi(LOG_TAG, "Removed SpiHost{{name='{}', hostDevice={}}}", name, hostDevice);
+		esp::logi("Removed SpiHost{{name='{}', hostDevice={}}}", name, hostDevice);
 	}
 }
 
@@ -102,7 +100,7 @@ SpiDevice SpiHost::AddDevice(std::string devName, gpio_num_t pinCs, int clockSpe
 
 	auto errRc = spi_bus_add_device(hostDevice, &devConfig, &deviceHandle);
 	if (errRc != ESP_OK) {
-		esp::loge(LOG_TAG, "spi_bus_add_device(SpiHost{{name='{}'}}) returned {}", name, errRc);
+		esp::loge("spi_bus_add_device(SpiHost{{name='{}'}}) returned {}", name, errRc);
 		throw std::runtime_error("spi_bus_add_device(SpiHost{{name='{}'}}) returned {}"_format(name, errRc));
 	}
 

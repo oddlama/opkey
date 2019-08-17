@@ -1,6 +1,7 @@
 set(COMPONENT_SRCS
 	main.cpp
 	application.cpp
+	profiler.cpp
 	adc_controller.cpp
 	spi_host.cpp
 	spi_device.cpp

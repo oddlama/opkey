@@ -1,6 +1,7 @@
 #pragma once
 
 #include <driver/spi_master.h>
+#include <string>
 
 
 namespace OpKey {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <esp_timer.h>
+
 #include <stdexcept>
 #include <memory>
 #include <array>
@@ -23,7 +25,7 @@ public:
 	 * Raw sensor data.
 	 */
 	struct RawData {
-		SensorTensor<uint16_t> value;
+		SensorTensor<uint16_t> value{};
 	};
 
 	/**
@@ -31,9 +33,9 @@ public:
 	 * previous data points.
 	 */
 	struct KinematicData {
-		SensorTensor<double> position;
-		SensorTensor<double> velocity;
-		SensorTensor<double> acceleration;
+		SensorTensor<double> position{};
+		SensorTensor<double> velocity{};
+		SensorTensor<double> acceleration{};
 	};
 
 	/**
@@ -56,10 +58,10 @@ public:
 	};
 
 	struct Data {
-		int64_t timestamp;
-		RawData raw;
-		KinematicData kinematic;
-		LogicStateData state;
+		int64_t timestamp = -1;
+		RawData raw{};
+		KinematicData kinematic{};
+		LogicStateData state{};
 
 		/** Checks if this contains valid data */
 		operator bool() const noexcept {
@@ -67,25 +69,20 @@ public:
 		}
 	};
 
-	using History = std::array<Data, Size()>;
+	using History = std::array<Data, N>;
 
 public:
-	/**
-	 * Initializes the history and sets the timestamp of all
-	 * datapoints in the history to -1.
-	 */
-	SensorHistory() noexcept {
-		// Invalidate the timestamps of each entry,
-		// to prevent usage of the uninitialized data that it contains
-		for (auto& data : history) {
-			data->timestamp = -1;
-		}
-	}
+	SensorHistory() = default;
 
-	void AppendRaw(*) {
-		Data* slot = NextSlot();
-		slot->timestamp = esp32_timer_get_time();
-	}
+	SensorHistory(const SensorHistory&) = delete;
+	SensorHistory(SensorHistory&&) = delete;
+	SensorHistory& operator=(const SensorHistory&) = delete;
+	SensorHistory& operator=(SensorHistory&&) = delete;
+
+	// TODO void AppendRaw(*) {
+	// TODO 	Data* slot = NextSlot();
+	// TODO 	slot->timestamp = esp_timer_get_time();
+	// TODO }
 
 	/**
 	 * Retrieves data from the history, with 0 denoting the newest
@@ -96,7 +93,7 @@ public:
 			throw std::out_of_range("Cannot access element {} in a history of size {}"_format(index, Size()));
 		}
 
-		if (firstSlot + index >= history.data() + Size()) {
+		if (firstSlot + index >= history->data() + Size()) {
 			return firstSlot + index - Size();
 		} else {
 			return firstSlot + index;
@@ -112,7 +109,7 @@ public:
 			throw std::out_of_range("Cannot access element {} in a history of size {}"_format(index, Size()));
 		}
 
-		if (firstSlot + index >= history.data() + Size()) {
+		if (firstSlot + index >= history->data() + Size()) {
 			return firstSlot + index - Size();
 		} else {
 			return firstSlot + index;
@@ -122,9 +119,6 @@ public:
 	constexpr size_t Size() const noexcept {
 		return N;
 	}
-
-	begin
-	end
 
 private:
 	/**

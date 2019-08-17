@@ -1,23 +1,21 @@
-#include "common.h"
 #include "spi_device.h"
+#include "fmt.h"
 
 
 namespace OpKey {
 
 
-static const char* LOG_TAG = "OpKey.SpiDevice";
-
 SpiDevice::SpiDevice(std::string name, spi_device_handle_t&& handle)
 	: handle(handle)
 	, name(std::move(name))
 {
-	esp::logi(LOG_TAG, "Initialized SpiDevice{{name='{}'}}", this->name);
+	esp::logi("Initialized SpiDevice{{name='{}'}}", this->name);
 }
 
 SpiDevice::~SpiDevice() noexcept {
 	if (handle != nullptr) {
 		ESP_ERROR_CHECK(spi_bus_remove_device(handle));
-		esp::logi(LOG_TAG, "Removed SpiDevice{{name='{}'}}", name);
+		esp::logi("Removed SpiDevice{{name='{}'}}", name);
 	}
 }
 
@@ -50,7 +48,7 @@ void SpiDevice::Transfer(uint8_t* rxData, size_t rxLen, uint8_t* txData, size_t 
 
 	esp_err_t rc = spi_device_transmit(handle, &transaction);
 	if (rc != ESP_OK) {
-		esp::loge(LOG_TAG, "spi_device_transmit(SpiDevice{{name='{}'}}) returned {}", name, rc);
+		esp::loge("spi_device_transmit(SpiDevice{{name='{}'}}) returned {}", name, rc);
 	}
 }
 

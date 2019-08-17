@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #include "spi_host.h"
 #include "spi_device.h"
 
