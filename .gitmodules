@@ -1,3 +1,6 @@
 [submodule "libs/fmt"]
 	path = libs/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "libs/entt"]
+	path = libs/entt
+	url = https://github.com/skypjack/entt
