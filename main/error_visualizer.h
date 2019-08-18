@@ -19,7 +19,8 @@ public:
 	ErrorVisualizer& operator=(const ErrorVisualizer&) = delete;
 	ErrorVisualizer& operator=(ErrorVisualizer&&) = delete;
 
-	void Tick();
+	void Tick() {
+	}
 
 private:
 	RmtLedStrip<PixelRgbw, RmtTimingsSk6812> ledStrip{GPIO_NUM_32, 144};
