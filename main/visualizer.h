@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sk6812.h"
+#include "rmt_led_strip.h"
 
 
 namespace OpKey {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "fmt.h"
+#include "pixel.h"
 
 #include <driver/rmt.h>
 #include <driver/gpio.h>
@@ -19,30 +20,36 @@ struct RmtTimings {
 	inline constexpr const static uint8_t RmtClockDivider = 2;
 	inline constexpr const static uint64_t RmtTicksPerSecond = (RmtBaseClock / RmtClockDivider);
 
-	inline constexpr static uint32_t NsToTicks(uint32_t ns) {
+	inline constexpr static uint64_t NsToTicks(uint32_t ns) {
 		constexpr const uint64_t NsPerSecond = 1000000000;
-		return static_cast<uint32_t>(ns * RmtTicksPerSecond / NsPerSecond);
+		return ns * RmtTicksPerSecond / NsPerSecond;
 	}
 };
 
 
+struct RmtValue {
+	uint16_t valHigh = 0;
+	uint16_t valLow = 0;
+};
+
+
 class RmtItem {
+public:
 	/**
 	 * Initialize the item using high and low time in ns.
 	 * Set the MSB of valHigh and clear the MSB of valLow,
 	 * to set the signal levels.
 	 */
 	constexpr RmtItem(uint16_t nsHigh, uint16_t nsLow) noexcept
-		: valHigh(RmtTimings::NsToTicks(nsHigh) | 0x8000)
-		, valLow(RmtTimings::NsToTicks(nsLow) & 0x7fff)
+		: value
+			{ static_cast<uint16_t>(RmtTimings::NsToTicks(nsHigh) | 0x8000)
+			, static_cast<uint16_t>(RmtTimings::NsToTicks(nsLow) & 0x7fff)
+			}
 	{ }
 
 private:
 	union {
-		struct {
-			uint16_t valHigh;
-			uint16_t valLow;
-		};
+		RmtValue value;
 		rmt_item32_t rmtItem;
 	};
 };
@@ -67,19 +74,6 @@ struct RmtTimingsApa106 : public RmtTimings {
 };
 
 
-struct PixelRGBW {
-	union {
-		struct {
-			uint8_t r;
-			uint8_t g;
-			uint8_t b;
-			uint8_t w;
-		};
-		uint32_t value = 0;
-	};
-};
-
-
 template<typename PixelType, typename TimingPolicy>
 class RmtLedStrip {
 public:
@@ -96,7 +90,7 @@ public:
 
 		rmt_config_t config{};
 		config.rmt_mode                  = RMT_MODE_TX;
-		config.rmtChannel                = this->rmtChannel;
+		config.channel                   = this->rmtChannel;
 		config.clk_div                   = TimingPolicy::RmtClockDivider;
 		config.gpio_num                  = gpioNum;
 		config.mem_block_num             = this->rmtMemBlockNum;
@@ -170,7 +164,7 @@ private:
 	) {
 		size_t size = 0;
 
-		for (const uint8_t curSrc = static_cast<const uint8_t*>(src); size * 8 < wantedNum; ++curSrc) {
+		for (const uint8_t* curSrc = static_cast<const uint8_t*>(src); size * 8 < wantedNum; ++curSrc) {
 			uint8_t data = *curSrc;
 
 			for (uint8_t bit = 0; bit < 8; ++bit) {
@@ -196,9 +190,9 @@ private:
 	rmt_channel_t rmtChannel;
 	size_t pixelCount;
 
-	std::array<std::vector<Pixel>, 2> pixelBuffers{};
-	Pixel* editBuffer = nullptr;
-	Pixel* sendBuffer = nullptr;
+	std::array<std::vector<PixelType>, 2> pixelBuffers{};
+	PixelType* editBuffer = nullptr;
+	PixelType* sendBuffer = nullptr;
 };
 
 
