@@ -29,6 +29,10 @@ public:
 		ledStrip.Update();
 	}
 
+	void ShowException(OpKeyException& e) {
+		// blink whole strip 3 times, then lock on error code (binary red yellow).
+	}
+
 	//void OnKeyPressed(Key key, double velocity, ) {
 	//	invalid = true;
 	//}

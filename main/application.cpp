@@ -15,6 +15,48 @@ uint8_t midiPacket[] = {
 	0x00   // velocity
 };
 
+
+[[noreturn]] void Application::TaskMain(void*) {
+	try {
+		Application{}();
+	} catch(OpKeyException& e) {
+		esp::loge("Caught exception: {}\nDevice will abort() and restart in 60 seconds.", e.what());
+
+		Visualizer visualizer{};
+		visualizer.OnException(e);
+
+		int64_t exceptionTime = esp_timer_get_time();
+		while (true) {
+			visualizer.Tick();
+
+			int64_t now = esp_timer_get_time();
+			if (now - exceptionTime > 60 * 1000 * 1000) {
+				// restart
+				break;
+			}
+
+			vTaskDelay(10 / portTICK_PERIOD_MS);
+		}
+
+		esp::loge("Aborting.");
+		abort();
+	} catch(std::exception& e) {
+		esp::loge("Caught exception: {}\nAborting.", e.what());
+		abort();
+	} catch(...) {
+		esp::loge("Caught unkown exception type\nAborting.");
+		abort();
+	}
+	esp::loge("Fatal: Application thread returned!\nAborting.");
+	abort();
+}
+
+void Application::StartTask() {
+	xTaskHandle taskHandle = nullptr;
+	xTaskCreatePinnedToCore(&TaskMain, "OpKey", 8192, nullptr, 0, &taskHandle, OpKey::Config::Core);
+}
+
+
 //void Application::onConnect(BLEServer* server) {
 //	esp::logi(LOG_TAG, "BLE connected");
 //	deviceConnected = true;
@@ -130,9 +172,9 @@ void Application::operator()() {
 	while (true) {
 		{
 			OPKEY_PROFILE_SCOPE("loop");
-		}
 
-		visualizer.Test();
+			visualizer.Test();
+		}
 
 		int64_t now = esp_timer_get_time();
 		if (now - profiler.GetResetTime() > 10000 * 1000) {

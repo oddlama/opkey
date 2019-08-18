@@ -33,32 +33,12 @@ public:
 	/**
 	 * The main function for the application task.
 	 */
-	[[noreturn]] static void TaskMain(void*) {
-		try {
-			Application{}();
-		} catch(OpKeyException& e) {
-			esp::loge("Caught exception: {}\nDevice will abort() and restart in 60 seconds.", e.what());
-			// TODO start visualizer loop to notify user.
-			vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
-			abort();
-		} catch(std::exception& e) {
-			esp::loge("Caught exception: {}\nAborting.", e.what());
-			abort();
-		} catch(...) {
-			esp::loge("Caught unkown exception type\nAborting.");
-			abort();
-		}
-		esp::loge("Fatal: Application thread returned!\nAborting.");
-		abort();
-	}
+	[[noreturn]] static void TaskMain(void*);
 
 	/**
 	 * Starts a new task for the application
 	 */
-	static void StartTask() {
-		xTaskHandle taskHandle = nullptr;
-		xTaskCreatePinnedToCore(&TaskMain, "OpKey", 8192, nullptr, 0, &taskHandle, OpKey::Config::Core);
-	}
+	static void StartTask();
 
 public:
 	void operator()();
