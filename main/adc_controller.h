@@ -1,5 +1,6 @@
 #pragma once
 
+#include "entt.h"
 #include "config.h"
 #include "spi_host.h"
 #include "spi_device.h"
@@ -8,9 +9,11 @@
 namespace OpKey {
 
 
+class Application;
+
 class AdcController {
 public:
-	AdcController();
+	AdcController(Application& application);
 
 	AdcController(const AdcController&) = default;
 	AdcController(AdcController&&) = default;
@@ -32,6 +35,8 @@ public:
 	//	}
 	//}
 
+	void OnTick();
+
 private:
 	void InitSpi();
 	void InitAdcs();
@@ -40,6 +45,7 @@ private:
 	SpiHost hspi{};
 	SpiHost vspi{};
 	std::array<SpiDevice, Config::NumAdcs> adcs{};
+	entt::scoped_connection tickConnection;
 };
 
 

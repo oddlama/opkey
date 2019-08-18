@@ -8,7 +8,9 @@
 namespace OpKey {
 
 
-AdcController::AdcController() {
+AdcController::AdcController(Application& application)
+	: tickConnection(application.GetTickSink().connect<&AdcController::OnTick>(*this))
+{
 	OPKEY_PROFILE_FUNCTION();
 	InitSpi();
 	InitAdcs();
@@ -91,6 +93,10 @@ void AdcController::InitAdcs() {
 	//}
 
 	// TODO prepare command DMA buffers
+}
+
+
+void AdcController::OnTick() {
 }
 
 

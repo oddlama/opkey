@@ -1,5 +1,7 @@
 #pragma once
 
+#include "entt.h"
+#include "exception.h"
 #include "profiler.h"
 #include "rmt_led_strip.h"
 
@@ -7,9 +9,11 @@
 namespace OpKey {
 
 
+class Application;
+
 class Visualizer {
 public:
-	Visualizer() = default;
+	Visualizer(Application& application);
 
 	Visualizer(const Visualizer&) = default;
 	Visualizer(Visualizer&&) = default;
@@ -29,10 +33,6 @@ public:
 		ledStrip.Update();
 	}
 
-	void ShowException(OpKeyException& e) {
-		// blink whole strip 3 times, then lock on error code (binary red yellow).
-	}
-
 	//void OnKeyPressed(Key key, double velocity, ) {
 	//	invalid = true;
 	//}
@@ -47,8 +47,11 @@ public:
 	//	}
 	//}
 
+	void OnTick();
+
 private:
 	RmtLedStrip<PixelRgbw, RmtTimingsSk6812> ledStrip{GPIO_NUM_32, 144};
+	entt::scoped_connection tickConnection;
 };
 
 

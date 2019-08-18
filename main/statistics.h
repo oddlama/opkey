@@ -1,12 +1,16 @@
 #pragma once
 
+#include "entt.h"
+
 
 namespace OpKey {
 
 
+class Application;
+
 class Statistics {
 public:
-	Statistics() noexcept = default;
+	Statistics(Application& application);
 
 	Statistics(const Statistics&) = default;
 	Statistics(Statistics&&) = default;
@@ -27,7 +31,10 @@ public:
 	//	}
 	//}
 
+	void OnTick();
+
 private:
+	entt::scoped_connection tickConnection;
 };
 
 

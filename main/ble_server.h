@@ -1,17 +1,23 @@
 #pragma once
 
+#include "entt.h"
+
 
 namespace OpKey {
 
 
+class Application;
+
 class BleServer {
 public:
-	BleServer() noexcept = default;
+	BleServer(Application& application);
 
 	BleServer(const BleServer&) = default;
 	BleServer(BleServer&&) = default;
 	BleServer& operator=(const BleServer&) = delete;
 	BleServer& operator=(BleServer&&) = delete;
+
+	void OnTick();
 
 	//void OnKeyPressed(Key key, double velocity, ) {
 	//}
@@ -19,6 +25,7 @@ public:
 	//}
 
 private:
+	entt::scoped_connection tickConnection;
 };
 
 

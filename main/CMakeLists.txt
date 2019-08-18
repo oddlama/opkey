@@ -1,10 +1,13 @@
 set(COMPONENT_SRCS
 	main.cpp
-	application.cpp
 	profiler.cpp
-	adc_controller.cpp
 	spi_host.cpp
 	spi_device.cpp
+	adc_controller.cpp
+	statistics.cpp
+	visualizer.cpp
+	ble_server.cpp
+	application.cpp
 	)
 
 set(COMPONENT_ADD_INCLUDEDIRS ".")

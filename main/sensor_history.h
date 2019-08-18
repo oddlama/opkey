@@ -74,8 +74,8 @@ public:
 public:
 	SensorHistory() = default;
 
-	SensorHistory(const SensorHistory&) = delete;
-	SensorHistory(SensorHistory&&) = delete;
+	SensorHistory(const SensorHistory&) = default;
+	SensorHistory(SensorHistory&&) = default;
 	SensorHistory& operator=(const SensorHistory&) = delete;
 	SensorHistory& operator=(SensorHistory&&) = delete;
 

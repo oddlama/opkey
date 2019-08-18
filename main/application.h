@@ -5,11 +5,13 @@
 #include "config.h"
 #include "settings.h"
 #include "profiler.h"
-#include "sensor_history.h"
+#include "sensor_manager.h"
 #include "adc_controller.h"
 #include "ble_server.h"
 #include "visualizer.h"
 #include "statistics.h"
+
+#include "entt/entt.hpp"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -43,18 +45,24 @@ public:
 public:
 	void operator()();
 
+	auto& GetTickSink() noexcept { return tickSink; }
+
 private:
 	// Persistent application settings
 	Settings settings{};
 
-	// The sensor data history
-	SensorHistory<5> history{};
+	// Signals
+	entt::sigh<void()> tickSignal{};
+	entt::sink<void()> tickSink{tickSignal};
+
+	// The sensor manager
+	SensorManager sensorManager{};
 
 	// Different components
-	AdcController adcController{};
-	BleServer bleServer{};
-	Visualizer visualizer{};
-	Statistics statistics{};
+	AdcController adcController{*this};
+	BleServer bleServer{*this};
+	Visualizer visualizer{*this};
+	Statistics statistics{*this};
 };
 
 

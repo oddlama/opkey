@@ -1,5 +1,6 @@
 #include "application.h"
 #include "dma.h"
+#include "error_visualizer.h"
 
 #include <esp_timer.h>
 
@@ -22,9 +23,7 @@ uint8_t midiPacket[] = {
 	} catch(OpKeyException& e) {
 		esp::loge("Caught exception: {}\nDevice will abort() and restart in 60 seconds.", e.what());
 
-		Visualizer visualizer{};
-		visualizer.OnException(e);
-
+		ErrorVisualizer visualizer{e};
 		int64_t exceptionTime = esp_timer_get_time();
 		while (true) {
 			visualizer.Tick();
@@ -171,9 +170,8 @@ void Application::operator()() {
 
 	while (true) {
 		{
-			OPKEY_PROFILE_SCOPE("loop");
-
-			visualizer.Test();
+			OPKEY_PROFILE_SCOPE("tick");
+			tickSignal.publish();
 		}
 
 		int64_t now = esp_timer_get_time();
