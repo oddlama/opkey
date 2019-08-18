@@ -1,1 +1,2 @@
 * namespace
+* ESP_ERROR_CHECK -> Esp32Exception(err)
