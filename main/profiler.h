@@ -4,6 +4,7 @@
 
 #include <stdexcept>
 #include <vector>
+#include <stack>
 #include <string_view>
 
 
@@ -11,18 +12,24 @@
 #define OPKEY_MACRO_CONCAT(x, y) OPKEY_CONCAT_IMPL(x, y)
 #define OPKEY_PROFILE_SCOPE(name) auto OPKEY_MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = Profiler::GetInstance()(name)
 #define OPKEY_PROFILE_FUNCTION() OPKEY_PROFILE_SCOPE(__FUNCTION__)
+#define OPKEY_PROFILE_INTERRUPT_SCOPE(name) auto OPKEY_MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = Profiler::GetInstance()(name, ProfileInterruptFunctionTag{})
+#define OPKEY_PROFILE_INTERRUPT_FUNCTION() OPKEY_PROFILE_INTERRUPT_SCOPE(__FUNCTION__)
 
 
 namespace OpKey {
+
+
+struct ProfileInterruptFunctionTag {};
 
 
 class Profiler;
 
 class ProfilerSectionGuard {
 public:
-	explicit ProfilerSectionGuard(Profiler& profiler, size_t section) noexcept
+	explicit ProfilerSectionGuard(Profiler& profiler, size_t section, size_t savedSection = -1) noexcept
 		: profiler(profiler)
 		, section(section)
+		, savedSection(savedSection)
 	{ }
 
 	~ProfilerSectionGuard() noexcept;
@@ -35,6 +42,7 @@ public:
 private:
 	Profiler& profiler;
 	size_t section;
+	size_t savedSection;
 };
 
 
@@ -64,9 +72,9 @@ private:
 		std::string_view GetName() const noexcept { return name; }
 		size_t GetDepth() const noexcept { return depth; }
 		size_t GetEnterCount() const noexcept { return enterCount; }
-		int64_t GetTotalTime() const noexcept { return totalTime;  }
-		int64_t GetMinTime() const noexcept { return minTime;    }
-		int64_t GetMaxTime() const noexcept { return maxTime;    }
+		int64_t GetTotalTime() const noexcept { return totalTime; }
+		int64_t GetMinTime() const noexcept { return minTime; }
+		int64_t GetMaxTime() const noexcept { return maxTime; }
 
 	private:
 		void Enter();
@@ -103,6 +111,20 @@ public:
 	}
 
 	/**
+	 * Returns a section guard for the given section id.
+	 * The id parameter MUST BE a string literal.
+	 */
+	ProfilerSectionGuard operator()(std::string_view id, ProfileInterruptFunctionTag) {
+		// Leave current section and save it, so we can re-enter it later.
+		auto savedSection = currentSection;
+		sections[currentSection].Leave();
+
+		// Switch to root section and enter the given section
+		currentSection = 0;
+		return ProfilerSectionGuard{*this, EnterSection(id), savedSection};
+	}
+
+	/**
 	 * Resets all recorded information
 	 */
 	void Reset();
@@ -121,7 +143,7 @@ public:
 
 private:
 	size_t EnterSection(std::string_view id);
-	void LeaveSection(size_t section) noexcept;
+	void LeaveSection(size_t section, size_t savedSection) noexcept;
 
 private:
 	std::vector<Section> sections{};

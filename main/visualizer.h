@@ -1,5 +1,6 @@
 #pragma once
 
+#include "profiler.h"
 #include "rmt_led_strip.h"
 
 
@@ -16,6 +17,7 @@ public:
 	Visualizer& operator=(Visualizer&&) = delete;
 
 	void Test() {
+		OPKEY_PROFILE_FUNCTION();
 		static uint32_t i = 0;
 		auto k = i % ledStrip.Size();
 		uint8_t r = (i % (ledStrip.Size() *  2)) >= ledStrip.Size()     ? 20 : 0;

@@ -7,7 +7,7 @@ namespace OpKey {
 
 
 ProfilerSectionGuard::~ProfilerSectionGuard() noexcept {
-	profiler.LeaveSection(section);
+	profiler.LeaveSection(section, savedSection);
 }
 
 
@@ -43,8 +43,7 @@ void Profiler::Reset() {
 	// Delete all sections but the root section,
 	// and record current time
 	sections.clear();
-	auto& root = sections.emplace_back("root", 0, 0);
-	root.minTime = 0;
+	sections.emplace_back("root", 0, 0);
 	resetTime = esp_timer_get_time();
 }
 
@@ -63,14 +62,14 @@ void Profiler::PrintSummary() {
 		totalCalls += section.GetEnterCount();
 	}
 
-	fmt::print("[[== PROFILE SUMMARY ==]]\n");
-	fmt::print("total time: {:d}us\n", totalTime);
-	fmt::print("total calls: {:d}\n", totalCalls);
+	fmt::print("+--------------------+--------------------------------------------------------------------------------------------+\n");
+	fmt::print("| PROFILING SUMMARY  | (total time: {:10d}us)   (total calls: {:8d})                                       |\n", totalTime, totalCalls);
 	fmt::print("+--------------------+----------------------+------------------------+--------------+--------------+--------------+\n");
 	fmt::print("| call count         | time w/o children    | Σ sum                  | Ø avg        | > min        | < max        |\n");
 	fmt::print("+--------------------+----------------------+------------------------+--------------+--------------+--------------+\n");
 
-	for (auto& section : sections) {
+	for (size_t i = 1; i < sections.size(); ++i) {
+		auto& section = sections[i];
 		fmt::print("| {:8d}({:7.3f}%) | {:8d}us({:7.3f}%) | Σ {:8d}us({:7.3f}%) | Ø {:8d}us | > {:8d}us | < {:8d}us | {:s}\n"
 			, section.GetEnterCount()
 			, Percent(section.GetEnterCount(), totalCalls)
@@ -84,6 +83,8 @@ void Profiler::PrintSummary() {
 			, section.GetName()
 			);
 	}
+
+	fmt::print("+--------------------+----------------------+------------------------+--------------+--------------+--------------+\n");
 }
 
 size_t Profiler::EnterSection(std::string_view id) {
@@ -110,7 +111,7 @@ size_t Profiler::EnterSection(std::string_view id) {
 	return currentSection = childSection;
 }
 
-void Profiler::LeaveSection(size_t section) noexcept {
+void Profiler::LeaveSection(size_t section, size_t savedSection) noexcept {
 	if (currentSection != section) {
 		esp::loge("Profiler::LeaveSection() called with invalid section '{}', while within '{}'\nAborting.", sections[section].GetName(), sections[currentSection].GetName());
 		abort();
@@ -119,7 +120,14 @@ void Profiler::LeaveSection(size_t section) noexcept {
 		abort();
 	}
 
-	currentSection = sections[currentSection].Leave();
+	auto leaveToSection = sections[currentSection].Leave();
+	if (savedSection == -1) {
+		currentSection = leaveToSection;
+	} else {
+		// After leaving the given section, re-enter and switch to the saved section
+		currentSection = savedSection;
+		sections[currentSection].Enter();
+	}
 	// TODO track total time in section and real time in section (LeaveForChild EnterAfterChild virtualleave virtualenter)
 }
 

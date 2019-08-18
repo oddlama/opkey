@@ -193,6 +193,7 @@ private:
 		, size_t* translatedSize
 		, size_t* itemNum
 	) {
+		OPKEY_PROFILE_INTERRUPT_FUNCTION();
 		size_t size = 0;
 
 		for (const uint8_t* curSrc = static_cast<const uint8_t*>(src); size * 8 < wantedNum; ++curSrc) {
