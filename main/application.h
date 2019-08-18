@@ -14,6 +14,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include <memory>
+
 
 namespace OpKey {
 
@@ -27,8 +29,7 @@ public:
 	Application& operator=(const Application&) = delete;
 	Application& operator=(Application&&) = delete;
 
-	auto& GetProfiler() noexcept { return profiler; }
-
+public:
 	/**
 	 * The main function for the application task.
 	 */
@@ -59,28 +60,21 @@ public:
 		xTaskCreatePinnedToCore(&TaskMain, "OpKey", 8192, nullptr, 0, &taskHandle, OpKey::Config::Core);
 	}
 
+public:
 	void operator()();
 
 private:
 	// Persistent application settings
 	Settings settings{};
 
-	// Profiling
-	// TODO ifdef
-//#ifdef ENABLE_PROFILING
-	Profiler profiler{};
-//#else
-//	DummyProfiler profiler{};
-//#endif
-
 	// The sensor data history
 	SensorHistory<5> history{};
 
 	// Different components
-	AdcController adcController{*this};
-	BleServer bleServer{*this};
-	Visualizer visualizer{*this};
-	Statistics statistics{*this};
+	AdcController adcController{};
+	BleServer bleServer{};
+	Visualizer visualizer{};
+	Statistics statistics{};
 };
 
 

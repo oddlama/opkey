@@ -6,18 +6,26 @@
 namespace OpKey {
 
 
-class Application;
-
 class Visualizer {
 public:
-	explicit Visualizer(Application& application) noexcept
-		: application(application)
-	{ }
+	Visualizer() = default;
 
-	Visualizer(const Visualizer&) = delete;
-	Visualizer(Visualizer&&) = delete;
+	Visualizer(const Visualizer&) = default;
+	Visualizer(Visualizer&&) = default;
 	Visualizer& operator=(const Visualizer&) = delete;
 	Visualizer& operator=(Visualizer&&) = delete;
+
+	void Test() {
+		static uint32_t i = 0;
+		auto k = i % ledStrip.Size();
+		uint8_t r = (i % (ledStrip.Size() *  2)) >= ledStrip.Size()     ? 20 : 0;
+		uint8_t g = (i % (ledStrip.Size() *  4)) >= ledStrip.Size() * 2 ? 20 : 0;
+		uint8_t b = (i % (ledStrip.Size() *  8)) >= ledStrip.Size() * 4 ? 20 : 0;
+		uint8_t w = (i % (ledStrip.Size() * 16)) >= ledStrip.Size() * 8 ? 20 : 0;
+		ledStrip[k] = { r, g, b, w };
+		++i;
+		ledStrip.Update();
+	}
 
 	//void OnKeyPressed(Key key, double velocity, ) {
 	//	invalid = true;
@@ -34,7 +42,7 @@ public:
 	//}
 
 private:
-	Application& application;
+	RmtLedStrip<PixelRgbw, RmtTimingsSk6812> ledStrip{GPIO_NUM_32, 144};
 };
 
 

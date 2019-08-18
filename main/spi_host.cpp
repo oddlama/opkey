@@ -1,6 +1,8 @@
 #include "spi_host.h"
 #include "fmt.h"
 
+#include <esp_err.h>
+
 
 namespace OpKey {
 
@@ -33,8 +35,8 @@ SpiHost::SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gp
 
 	auto errRc = spi_bus_initialize(this->hostDevice, &busConfig, static_cast<int>(dmaChannel));
 	if (errRc != ESP_OK) {
-		esp::loge("spi_bus_initialize() returned {}", errRc);
-		throw std::runtime_error("spi_bus_initialize() returned {}"_format(errRc));
+		esp::loge("spi_bus_initialize() returned {}", esp_err_to_name(errRc));
+		throw std::runtime_error("spi_bus_initialize() returned {}"_format(esp_err_to_name(errRc)));
 	}
 
 	esp::logi("Initialized SpiHost{{name='{}', hostDevice={}, pinSclk={}, pinMosi={}, pinMiso={}}}"
@@ -100,8 +102,8 @@ SpiDevice SpiHost::AddDevice(std::string devName, gpio_num_t pinCs, int clockSpe
 
 	auto errRc = spi_bus_add_device(hostDevice, &devConfig, &deviceHandle);
 	if (errRc != ESP_OK) {
-		esp::loge("spi_bus_add_device(SpiHost{{name='{}'}}) returned {}", name, errRc);
-		throw std::runtime_error("spi_bus_add_device(SpiHost{{name='{}'}}) returned {}"_format(name, errRc));
+		esp::loge("spi_bus_add_device(SpiHost{{name='{}'}}) returned {}", name, esp_err_to_name(errRc));
+		throw std::runtime_error("spi_bus_add_device(SpiHost{{name='{}'}}) returned {}"_format(name, esp_err_to_name(errRc)));
 	}
 
 	return SpiDevice{std::move(devName), std::move(deviceHandle)};

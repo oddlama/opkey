@@ -5,6 +5,7 @@
 
 #include <driver/rmt.h>
 #include <driver/gpio.h>
+#include <esp_err.h>
 
 #include <array>
 #include <stdexcept>
@@ -47,6 +48,10 @@ public:
 			}
 	{ }
 
+	operator rmt_item32_t() const noexcept {
+		return rmtItem;
+	}
+
 private:
 	union {
 		RmtValue value;
@@ -77,32 +82,43 @@ struct RmtTimingsApa106 : public RmtTimings {
 template<typename PixelType, typename TimingPolicy>
 class RmtLedStrip {
 public:
-	RmtLedStrip(gpio_num_t gpioNum, size_t pixelCount, rmt_channel_t rmtChannel = RMT_CHANNEL_0, int rmtMemBlockNum = 8)
+	RmtLedStrip(gpio_num_t pin, size_t pixelCount, rmt_channel_t rmtChannel = RMT_CHANNEL_0, int rmtMemBlockNum = 8)
 		: rmtChannel(rmtChannel)
 		, pixelCount(pixelCount)
 	{
-		for (int i = 0; i < 2; ++i) {
-			pixelBuffers[i].resize(pixelCount);
-		}
-
-		editBuffer = pixelBuffers[0].data();
-		sendBuffer = pixelBuffers[1].data();
+		esp::logi("Initialized RmtLedStrip{{pin={}, pixelCount={}, rmtChannel={}, rmtMemBlockNum={}}}", pin, pixelCount, rmtChannel, rmtMemBlockNum);
+		editBuffer.resize(pixelCount);
+		sendBuffer.resize(pixelCount);
 
 		rmt_config_t config{};
 		config.rmt_mode                  = RMT_MODE_TX;
 		config.channel                   = this->rmtChannel;
 		config.clk_div                   = TimingPolicy::RmtClockDivider;
-		config.gpio_num                  = gpioNum;
-		config.mem_block_num             = this->rmtMemBlockNum;
+		config.gpio_num                  = pin;
+		config.mem_block_num             = rmtMemBlockNum;
 		config.tx_config.loop_en         = false;
 		config.tx_config.carrier_en      = false;
 		config.tx_config.carrier_level   = RMT_CARRIER_LEVEL_LOW;
 		config.tx_config.idle_output_en  = true;
 		config.tx_config.idle_level      = RMT_IDLE_LEVEL_LOW;
 
-		ESP_ERROR_CHECK(rmt_config(&config));
-		ESP_ERROR_CHECK(rmt_driver_install(this->rmtChannel, 0, 0));
-		ESP_ERROR_CHECK(rmt_translator_init(this->rmtChannel, RmtTranslate));
+		auto errRc = rmt_config(&config);
+		if (errRc != ESP_OK) {
+			esp::loge("rmt_config() returned {}", esp_err_to_name(errRc));
+			throw std::runtime_error("rmt_config() returned {}"_format(esp_err_to_name(errRc)));
+		}
+
+		errRc = rmt_driver_install(this->rmtChannel, 0, 0);
+		if (errRc != ESP_OK) {
+			esp::loge("rmt_driver_install() returned {}", esp_err_to_name(errRc));
+			throw std::runtime_error("rmt_driver_install() returned {}"_format(esp_err_to_name(errRc)));
+		}
+
+		errRc = rmt_translator_init(this->rmtChannel, RmtTranslate);
+		if (errRc != ESP_OK) {
+			esp::loge("rmt_translator_init() returned {}", esp_err_to_name(errRc));
+			throw std::runtime_error("rmt_translator_init() returned {}"_format(esp_err_to_name(errRc)));
+		}
 	}
 
 	RmtLedStrip(const RmtLedStrip&) noexcept = default;
@@ -146,12 +162,27 @@ public:
 			return;
 		}
 
-		// Swap buffers
-		std::swap(editBuffer, sendBuffer);
+		// "Swap" buffers (copy current state into send buffer)
+		std::copy(editBuffer.begin(), editBuffer.end(), sendBuffer.begin());
 
 		// Start transmitting the sending buffer, and do not block until completion.
-		rmt_write_sample(rmtChannel, static_cast<const uint8_t*>(sendBuffer), pixelCount, false);
+		rmt_write_sample(rmtChannel, reinterpret_cast<const uint8_t*>(sendBuffer.data()), sendBuffer.size() * sizeof(PixelType), false);
 	}
+
+	void Clear() {
+		for (auto& pixel : *this) {
+			pixel.Clear();
+		}
+	}
+
+	size_t Size() const noexcept { return pixelCount; }
+
+	auto cbegin() const { return editBuffer.cbegin(); }
+	auto begin() const { return editBuffer.begin(); }
+	auto begin() { return editBuffer.begin(); }
+	auto cend() const { return editBuffer.cend(); }
+	auto end() const { return editBuffer.end(); }
+	auto end() { return editBuffer.end(); }
 
 private:
 	static void IRAM_ATTR RmtTranslate
@@ -168,7 +199,7 @@ private:
 			uint8_t data = *curSrc;
 
 			for (uint8_t bit = 0; bit < 8; ++bit) {
-				dest->val = (data & 0x80) ? TimingPolicy::RmtBit1 : TimingPolicy::RmtBit0;
+				*dest = (data & 0x80) ? TimingPolicy::RmtBit1 : TimingPolicy::RmtBit0;
 				++dest;
 				data <<= 1;
 			}
@@ -190,9 +221,8 @@ private:
 	rmt_channel_t rmtChannel;
 	size_t pixelCount;
 
-	std::array<std::vector<PixelType>, 2> pixelBuffers{};
-	PixelType* editBuffer = nullptr;
-	PixelType* sendBuffer = nullptr;
+	std::vector<PixelType> editBuffer{};
+	std::vector<PixelType> sendBuffer{};
 };
 
 

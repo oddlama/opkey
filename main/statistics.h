@@ -4,16 +4,12 @@
 namespace OpKey {
 
 
-class Application;
-
 class Statistics {
 public:
-	explicit Statistics(Application& application) noexcept
-		: application(application)
-	{ }
+	Statistics() noexcept = default;
 
-	Statistics(const Statistics&) = delete;
-	Statistics(Statistics&&) = delete;
+	Statistics(const Statistics&) = default;
+	Statistics(Statistics&&) = default;
 	Statistics& operator=(const Statistics&) = delete;
 	Statistics& operator=(Statistics&&) = delete;
 
@@ -32,7 +28,6 @@ public:
 	//}
 
 private:
-	Application& application;
 };
 
 

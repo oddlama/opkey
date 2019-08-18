@@ -4,16 +4,12 @@
 namespace OpKey {
 
 
-class Application;
-
 class BleServer {
 public:
-	explicit BleServer(Application& application) noexcept
-		: application(application)
-	{ }
+	BleServer() noexcept = default;
 
-	BleServer(const BleServer&) = delete;
-	BleServer(BleServer&&) = delete;
+	BleServer(const BleServer&) = default;
+	BleServer(BleServer&&) = default;
 	BleServer& operator=(const BleServer&) = delete;
 	BleServer& operator=(BleServer&&) = delete;
 
@@ -23,7 +19,6 @@ public:
 	//}
 
 private:
-	Application& application;
 };
 
 

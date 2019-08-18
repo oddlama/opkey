@@ -7,6 +7,12 @@
 #include <string_view>
 
 
+#define OPKEY_CONCAT_IMPL(x, y) x##y
+#define OPKEY_MACRO_CONCAT(x, y) OPKEY_CONCAT_IMPL(x, y)
+#define OPKEY_PROFILE_SCOPE(name) auto OPKEY_MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = Profiler::GetInstance()(name)
+#define OPKEY_PROFILE_FUNCTION() OPKEY_PROFILE_SCOPE(__FUNCTION__)
+
+
 namespace OpKey {
 
 
@@ -37,6 +43,12 @@ private:
  */
 class Profiler {
 	friend class ProfilerSectionGuard;
+
+public:
+	static Profiler& GetInstance() {
+		static Profiler instance{};
+		return instance;
+	}
 
 private:
 	class Section {
@@ -73,9 +85,10 @@ private:
 		int64_t maxTime = 0;
 	};
 
-public:
+private:
 	Profiler();
 
+public:
 	Profiler(const Profiler&) = delete;
 	Profiler(Profiler&&) = delete;
 	Profiler& operator=(const Profiler&) = delete;

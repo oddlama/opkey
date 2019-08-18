@@ -8,23 +8,15 @@
 namespace OpKey {
 
 
-#define CONCAT_IMPL(x, y) x##y
-#define MACRO_CONCAT(x, y) CONCAT_IMPL(x, y)
-#define PROFILE_SCOPE(name) auto MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = application.GetProfiler()(name)
-#define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCTION__)
-
-
-AdcController::AdcController(Application& application)
-	: application(application)
-{
-	PROFILE_FUNCTION();
+AdcController::AdcController() {
+	OPKEY_PROFILE_FUNCTION();
 	InitSpi();
 	InitAdcs();
 }
 
 
 void AdcController::InitSpi() {
-	PROFILE_FUNCTION();
+	OPKEY_PROFILE_FUNCTION();
 	esp::logi("Initializing SPI");
 
 	hspi = SpiHost
@@ -56,7 +48,7 @@ void AdcController::InitSpi() {
 }
 
 void AdcController::InitAdcs() {
-	PROFILE_FUNCTION();
+	OPKEY_PROFILE_FUNCTION();
 	esp::logi("Initializing SPI ADCs");
 
 	// Set mode to Auto1 with full input range
@@ -85,27 +77,21 @@ void AdcController::InitAdcs() {
 
 	// Check that every adc is online and correctly
 	// programmed by verifying a two full cycles
-	for (auto& adc : adcs) {
-		Ads7953::Transfer(adc, *rx, *tx, continueOperation);
-		int channel = rx->GetChannel();
-		for (int i = 0; i < 2 * 15; ++i) {
-			int expectedChannel = (channel + 1) % 15;
-			Ads7953::Transfer(adc, *rx, *tx, continueOperation);
-			if (rx->GetChannel() != expectedChannel) {
-				throw OpKeyException("Initialization error: '{}' returned invalid data"_format(adc.GetName()));
-			}
-			channel = expectedChannel;
-		}
-	}
+	//for (auto& adc : adcs) {
+	//	Ads7953::Transfer(adc, *rx, *tx, continueOperation);
+	//	int channel = rx->GetChannel();
+	//	for (int i = 0; i < 2 * 15; ++i) {
+	//		int expectedChannel = (channel + 1) % 15;
+	//		Ads7953::Transfer(adc, *rx, *tx, continueOperation);
+	//		if (rx->GetChannel() != expectedChannel) {
+	//			throw OpKeyException("Initialization error: '{}' returned invalid data"_format(adc.GetName()));
+	//		}
+	//		channel = expectedChannel;
+	//	}
+	//}
 
 	// TODO prepare command DMA buffers
 }
-
-
-#undef CONCAT_IMPL
-#undef MACRO_CONCAT
-#undef PROFILE_SCOPE
-#undef PROFILE_FUNCTION
 
 
 } // namespace OpKey

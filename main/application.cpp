@@ -7,12 +7,6 @@
 namespace OpKey {
 
 
-#define CONCAT_IMPL(x, y) x##y
-#define MACRO_CONCAT(x, y) CONCAT_IMPL(x, y)
-#define PROFILE_SCOPE(name) auto MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = profiler(name)
-
-
-
 uint8_t midiPacket[] = {
 	0x80,  // header
 	0x80,  // timestamp, not implemented
@@ -128,13 +122,17 @@ uint8_t midiPacket[] = {
 
 
 void Application::operator()() {
+	auto& profiler = Profiler::GetInstance();
+
 	profiler.PrintSummary();
 	profiler.Reset();
 
 	while (true) {
 		{
-			PROFILE_SCOPE("loop");
+			OPKEY_PROFILE_SCOPE("loop");
 		}
+
+		visualizer.Test();
 
 		int64_t now = esp_timer_get_time();
 		if (now - profiler.GetResetTime() > 10000 * 1000) {
@@ -210,11 +208,6 @@ void Application::operator()() {
 	//			if position < minthreshold:
 	//				send key up.
 }
-
-
-#undef CONCAT_IMPL
-#undef MACRO_CONCAT
-#undef PROFILE_SCOPE
 
 
 } // namespace OpKey

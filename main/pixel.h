@@ -1,19 +1,25 @@
 #pragma once
 
+#include "color.h"
+
+
 namespace OpKey {
 
 
-template<size_t Components>
-class Pixel {
+class PixelRgbw {
 public:
-	std::array<uint8_t, Components> components;
-};
+	void Clear() {
+		r = 0;
+		g = 0;
+		b = 0;
+		w = 0;
+	}
 
-class PixelRGBW : public Pixel<4> {
-//	ComponentAccessor<0> r;
-//	ComponentAccessor<1> g;
-//	ComponentAccessor<2> b;
-//	ComponentAccessor<3> w;
+public:
+	uint8_t r = 0;
+	uint8_t g = 0;
+	uint8_t b = 0;
+	uint8_t w = 0;
 };
 
 

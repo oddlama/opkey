@@ -30,6 +30,7 @@ size_t Profiler::Section::Leave() {
 
 
 Profiler::Profiler() {
+	esp::logi("Initializing profiler");
 	sections.reserve(128);
 	Reset();
 }
@@ -42,7 +43,8 @@ void Profiler::Reset() {
 	// Delete all sections but the root section,
 	// and record current time
 	sections.clear();
-	sections.emplace_back("root", 0, 0);
+	auto& root = sections.emplace_back("root", 0, 0);
+	root.minTime = 0;
 	resetTime = esp_timer_get_time();
 }
 
@@ -64,20 +66,22 @@ void Profiler::PrintSummary() {
 	fmt::print("[[== PROFILE SUMMARY ==]]\n");
 	fmt::print("total time: {:d}us\n", totalTime);
 	fmt::print("total calls: {:d}\n", totalCalls);
-	fmt::print("[relative us(%)] [calls cnt(%)] - <name>: total us(%), mean us, min us, max us\n");
+	fmt::print("+--------------------+----------------------+------------------------+--------------+--------------+--------------+\n");
+	fmt::print("| call count         | time w/o children    | Σ sum                  | Ø avg        | > min        | < max        |\n");
+	fmt::print("+--------------------+----------------------+------------------------+--------------+--------------+--------------+\n");
 
 	for (auto& section : sections) {
-		fmt::print("[{:8d}us({:6.3f}%)] [{:8d}({:6.3f}%)] - {:s}: {:8d}us({:6.3f}%), {:8d}us, {:8d}us, {:8d}us\n"
-			, 0 //sectionMinusChildrenTime
-			, 0.0 //sectionMinusChildrenPercent
+		fmt::print("| {:8d}({:7.3f}%) | {:8d}us({:7.3f}%) | Σ {:8d}us({:7.3f}%) | Ø {:8d}us | > {:8d}us | < {:8d}us | {:s}\n"
 			, section.GetEnterCount()
 			, Percent(section.GetEnterCount(), totalCalls)
-			, section.GetName()
+			, 0 //sectionMinusChildrenTime
+			, 0.0 //sectionMinusChildrenPercent
 			, section.GetTotalTime()
 			, Percent(section.GetTotalTime(), totalTime)
-			, section.GetTotalTime() / section.GetEnterCount()
+			, (section.GetEnterCount() > 0) ? (section.GetTotalTime() / section.GetEnterCount()) : 0
 			, section.GetMinTime()
 			, section.GetMaxTime()
+			, section.GetName()
 			);
 	}
 }

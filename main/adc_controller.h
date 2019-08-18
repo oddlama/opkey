@@ -8,14 +8,12 @@
 namespace OpKey {
 
 
-class Application;
-
 class AdcController {
 public:
-	explicit AdcController(Application& application);
+	AdcController();
 
-	AdcController(const AdcController&) = delete;
-	AdcController(AdcController&&) = delete;
+	AdcController(const AdcController&) = default;
+	AdcController(AdcController&&) = default;
 	AdcController& operator=(const AdcController&) = delete;
 	AdcController& operator=(AdcController&&) = delete;
 
@@ -39,8 +37,6 @@ private:
 	void InitAdcs();
 
 private:
-	Application& application;
-
 	SpiHost hspi{};
 	SpiHost vspi{};
 	std::array<SpiDevice, Config::NumAdcs> adcs{};
