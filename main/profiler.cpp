@@ -6,6 +6,7 @@
 namespace OpKey {
 
 
+#ifndef NDEBUG
 ProfilerSectionGuard::~ProfilerSectionGuard() noexcept {
 	profiler.LeaveSection(section, savedSection);
 }
@@ -130,6 +131,7 @@ void Profiler::LeaveSection(size_t section, size_t savedSection) noexcept {
 	}
 	// TODO track total time in section and real time in section (LeaveForChild EnterAfterChild virtualleave virtualenter)
 }
+#endif // NDEBUG
 
 
 } // namespace OpKey

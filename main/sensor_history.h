@@ -1,5 +1,9 @@
 #pragma once
 
+#include "fmt.h"
+#include "sensor.h"
+#include "sensor_tensor.h"
+
 #include <esp_timer.h>
 
 #include <stdexcept>
@@ -10,10 +14,6 @@
 namespace OpKey {
 
 
-template<typename T>
-using SensorTensor = std::array<T, 90>;
-
-
 /**
  * A class to store the last N points of sensor data, and
  * the corresponding logical state
@@ -21,13 +21,6 @@ using SensorTensor = std::array<T, 90>;
 template<size_t N>
 class SensorHistory {
 public:
-	/**
-	 * Raw sensor data.
-	 */
-	struct RawData {
-		SensorTensor<uint16_t> value{};
-	};
-
 	/**
 	 * Kinematic sensor data calculated from raw value and
 	 * previous data points.
@@ -59,7 +52,7 @@ public:
 
 	struct Data {
 		int64_t timestamp = -1;
-		RawData raw{};
+		RawSensorData raw{};
 		KinematicData kinematic{};
 		LogicStateData state{};
 

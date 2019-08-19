@@ -155,9 +155,9 @@ public:
 	/**
 	 * Updates the LED strip with the current pixel data.
 	 */
-	void Update() {
+	void Update(bool wait = false) {
 		// Wait until previous transmission is completed
-		if (auto err = rmt_wait_tx_done(rmtChannel, std::numeric_limits<TickType_t>::max()); err != ESP_OK) {
+		if (auto err = rmt_wait_tx_done(rmtChannel, portMAX_DELAY); err != ESP_OK) {
 			esp::logw("rmt_wait_tx_done() in RmtLedStrip::Update() returned {}", esp_err_to_name(err));
 			return;
 		}
@@ -166,7 +166,7 @@ public:
 		std::copy(editBuffer.begin(), editBuffer.end(), sendBuffer.begin());
 
 		// Start transmitting the sending buffer, and do not block until completion.
-		rmt_write_sample(rmtChannel, reinterpret_cast<const uint8_t*>(sendBuffer.data()), sendBuffer.size() * sizeof(PixelType), false);
+		rmt_write_sample(rmtChannel, reinterpret_cast<const uint8_t*>(sendBuffer.data()), sendBuffer.size() * sizeof(PixelType), wait);
 	}
 
 	void Clear() {

@@ -21,7 +21,7 @@ public:
 
 public:
 	explicit SpiHost() noexcept = default;
-	explicit SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gpio_num_t pinMosi, gpio_num_t pinMiso, DmaChannel dmaChannel);
+	explicit SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gpio_num_t pinMosi, gpio_num_t pinMiso, DmaChannel dmaChannel, int maxTransferSize = 0);
 	~SpiHost() noexcept;
 
 	SpiHost(SpiHost&& other) noexcept;

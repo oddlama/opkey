@@ -4,48 +4,39 @@
 #include "config.h"
 #include "spi_host.h"
 #include "spi_device.h"
+#include "sensor_tensor.h"
+#include "ads7953.h"
 
 
 namespace OpKey {
 
 
-class Application;
-
 class AdcController {
 public:
-	AdcController(Application& application);
+	AdcController();
 
 	AdcController(const AdcController&) = default;
 	AdcController(AdcController&&) = default;
 	AdcController& operator=(const AdcController&) = delete;
 	AdcController& operator=(AdcController&&) = delete;
 
-	//void OnKeyPressed(Key key, double velocity, ) {
-	//	invalid = true;
-	//}
-	//void OnKeyReleased(Key key, ) {
-	//	invalid = true;
-	//}
-	//void Tick() {
-	//	key
-	//	if (invalid || lastUpdate - now > updateDelayOrFrequencyOrSo) {
-	//		invalid = false;
-
-	//		show();
-	//	}
-	//}
-
-	void OnTick();
+	void Read(RawSensorData& data);
+	void Read(RawSensorData& data, uint32_t samples);
 
 private:
 	void InitSpi();
 	void InitAdcs();
 
 private:
+	// Spi
 	SpiHost hspi{};
 	SpiHost vspi{};
 	std::array<SpiDevice, Config::NumAdcs> adcs{};
-	entt::scoped_connection tickConnection;
+
+	// Transactions and DMA buffers
+	unique_ptr_dma<Ads7953::Command> continueOperationTx = make_unique_dma<Ads7953::Command>();
+	unique_ptr_dma<std::array<Ads7953::Result, 15*6>> continueOperationRxs = make_unique_dma<std::array<Ads7953::Result, 15*6>>();
+	std::array<spi_transaction_t, 15*6> continueOperationTransactions{};
 };
 
 

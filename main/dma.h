@@ -22,6 +22,11 @@ enum class DmaChannel {
 
 template<typename T>
 T* DmaMalloc(size_t size) {
+	// DMA operates in units of 4 bytes, so extend the allocated range if necessary.
+	if ((size & 0x3ul) != 0) {
+		size = (size & ~0x3ul) + 0x4;
+	}
+
 	return static_cast<T*>(heap_caps_malloc(size, MALLOC_CAP_DMA));
 }
 

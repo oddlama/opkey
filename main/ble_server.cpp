@@ -6,10 +6,15 @@ namespace OpKey {
 
 
 BleServer::BleServer(Application& application)
-	: tickConnection(application.GetTickSink().connect<&BleServer::OnTick>(*this))
+	: onTickConnection(application.GetOnTickSink().connect<&BleServer::OnTick>(*this))
+	, onSensorStateChangeConnection(application.GetOnSensorStateChangeSink().connect<&BleServer::OnSensorStateChange>(*this))
 { }
 
 void BleServer::OnTick() {
+	OPKEY_PROFILE_FUNCTION();
+}
+
+void BleServer::OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor) {
 }
 
 

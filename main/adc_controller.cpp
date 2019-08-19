@@ -8,9 +8,7 @@
 namespace OpKey {
 
 
-AdcController::AdcController(Application& application)
-	: tickConnection(application.GetTickSink().connect<&AdcController::OnTick>(*this))
-{
+AdcController::AdcController() {
 	OPKEY_PROFILE_FUNCTION();
 	InitSpi();
 	InitAdcs();
@@ -28,6 +26,7 @@ void AdcController::InitSpi() {
 		, Config::hspi.pinMosi
 		, Config::hspi.pinMiso
 		, DmaChannel::Dma1
+		, 16
 		};
 
 	vspi = SpiHost
@@ -37,6 +36,7 @@ void AdcController::InitSpi() {
 		, Config::vspi.pinMosi
 		, Config::vspi.pinMiso
 		, DmaChannel::Dma2
+		, 16
 		};
 
 	adcs =
@@ -70,12 +70,20 @@ void AdcController::InitAdcs() {
 		fmt::print("{:08b} {:08b}\n", rx->data[0], rx->data[1]);
 		Ads7953::Transfer(adc, *rx, *tx, programModeAuto1);
 		fmt::print("{:08b} {:08b}\n", rx->data[0], rx->data[1]);
-		// TODO show error when module is not responding!!!!!!!!!!!!
-		// (make a reliable alive check e.g. polling 20 times or so and checking for reasonable result)
 	}
 
-	// Continue operation message
+	// Prepare several continueOperation transactions linked to rx and tx,
+	// preinitialized with Ads7953::ContinueOperation
 	auto continueOperation = Ads7953::ContinueOperation{};
+	*continueOperationTx = continueOperation.ToCommand();
+
+	for (int i = 0; i < 15*6; ++i) {
+		continueOperationTransactions[i].flags     = 0;
+		continueOperationTransactions[i].length    = continueOperationTx->data.size() * 8;
+		continueOperationTransactions[i].tx_buffer = continueOperationTx->data.data();
+		continueOperationTransactions[i].rxlength  = (*continueOperationRxs)[i].data.size() * 8;
+		continueOperationTransactions[i].rx_buffer = (*continueOperationRxs)[i].data.data();
+	}
 
 	// Check that every adc is online and correctly
 	// programmed by verifying a two full cycles
@@ -91,12 +99,39 @@ void AdcController::InitAdcs() {
 	//		channel = expectedChannel;
 	//	}
 	//}
-
-	// TODO prepare command DMA buffers
 }
 
 
-void AdcController::OnTick() {
+void AdcController::Read(RawSensorData& data) {
+	OPKEY_PROFILE_FUNCTION();
+
+	int multisamples = 10;
+	//for (int a = 0; a < Config::NumAdcs; ++a) {
+	//	auto busGuard = adcs[a].AcquireBus();
+	//	for (int s = 0; s < multisamples; ++s) {
+	//		for (int c = 0; c < Config::NumChannels; ++c) {
+	//			adcs[a].TransferPolling(continueOperationTransactions[c]);
+	//			data[a * Config::NumChannels + rx.GetChannel()] = rx.GetValue();
+	//		}
+	//		//for (int c = 0; c < Config::NumChannels; ++c) {
+	//		//	auto& rx = (*continueOperationRxs)[c];
+	//		//	data[a * Config::NumChannels + rx.GetChannel()] = rx.GetValue();
+	//		//}
+	//	}
+	//}
+	for (int s = 0; s < multisamples; ++s) {
+		for (int a = 0; a < Config::NumAdcs; ++a) {
+			auto busGuard = adcs[a].AcquireBus();
+			for (int c = 0; c < Config::NumChannels; ++c) {
+				adcs[a].TransferPolling(continueOperationTransactions[a*15+c]);
+				//spi_device_polling_transmit(*reinterpret_cast<spi_device_handle_t*>(&adcs[a]), &continueOperationTransactions[a*15+c]);
+			}
+		}
+		//for (int c = 0; c < Config::NumChannels; ++c) {
+		//	for (int a = 0; a < Config::NumAdcs; ++a) {
+		//	}
+		//}
+	}
 }
 
 

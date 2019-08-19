@@ -8,6 +8,7 @@ set(COMPONENT_SRCS
 	visualizer.cpp
 	ble_server.cpp
 	application.cpp
+	sensor_manager.cpp
 	)
 
 set(COMPONENT_ADD_INCLUDEDIRS ".")

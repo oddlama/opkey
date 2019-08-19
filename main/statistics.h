@@ -34,7 +34,7 @@ public:
 	void OnTick();
 
 private:
-	entt::scoped_connection tickConnection;
+	entt::scoped_connection onTickConnection;
 };
 
 

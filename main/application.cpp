@@ -171,7 +171,7 @@ void Application::operator()() {
 	while (true) {
 		{
 			OPKEY_PROFILE_SCOPE("tick");
-			tickSignal.publish();
+			onTickSignal.publish();
 		}
 
 		int64_t now = esp_timer_get_time();

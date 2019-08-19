@@ -6,11 +6,12 @@ namespace OpKey {
 
 
 Statistics::Statistics(Application& application)
-	: tickConnection(application.GetTickSink().connect<&Statistics::OnTick>(*this))
+	: onTickConnection(application.GetOnTickSink().connect<&Statistics::OnTick>(*this))
 { }
 
 
 void Statistics::OnTick() {
+	OPKEY_PROFILE_FUNCTION();
 }
 
 

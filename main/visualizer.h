@@ -51,7 +51,7 @@ public:
 
 private:
 	RmtLedStrip<PixelRgbw, RmtTimingsSk6812> ledStrip{GPIO_NUM_32, 144};
-	entt::scoped_connection tickConnection;
+	entt::scoped_connection onTickConnection;
 };
 
 

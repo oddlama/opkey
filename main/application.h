@@ -3,10 +3,8 @@
 #include "exception.h"
 #include "fmt.h"
 #include "config.h"
-#include "settings.h"
 #include "profiler.h"
 #include "sensor_manager.h"
-#include "adc_controller.h"
 #include "ble_server.h"
 #include "visualizer.h"
 #include "statistics.h"
@@ -45,21 +43,16 @@ public:
 public:
 	void operator()();
 
-	auto& GetTickSink() noexcept { return tickSink; }
+	auto& GetOnTickSink() noexcept { return onTickSink; }
+	auto& GetOnSensorStateChangeSink() noexcept { return sensorManager.GetOnSensorStateChangeSink(); }
 
 private:
-	// Persistent application settings
-	Settings settings{};
-
 	// Signals
-	entt::sigh<void()> tickSignal{};
-	entt::sink<void()> tickSink{tickSignal};
-
-	// The sensor manager
-	SensorManager sensorManager{};
+	entt::sigh<void()> onTickSignal{};
+	entt::sink<void()> onTickSink{onTickSignal};
 
 	// Different components
-	AdcController adcController{*this};
+	SensorManager sensorManager{*this};
 	BleServer bleServer{*this};
 	Visualizer visualizer{*this};
 	Statistics statistics{*this};

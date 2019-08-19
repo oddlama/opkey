@@ -8,15 +8,18 @@
 #include <string_view>
 
 
+namespace OpKey {
+
+
+#ifndef NDEBUG
 #define OPKEY_CONCAT_IMPL(x, y) x##y
 #define OPKEY_MACRO_CONCAT(x, y) OPKEY_CONCAT_IMPL(x, y)
-#define OPKEY_PROFILE_SCOPE(name) auto OPKEY_MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = Profiler::GetInstance()(name)
-#define OPKEY_PROFILE_FUNCTION() OPKEY_PROFILE_SCOPE(__FUNCTION__)
-#define OPKEY_PROFILE_INTERRUPT_SCOPE(name) auto OPKEY_MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = Profiler::GetInstance()(name, ProfileInterruptFunctionTag{})
-#define OPKEY_PROFILE_INTERRUPT_FUNCTION() OPKEY_PROFILE_INTERRUPT_SCOPE(__FUNCTION__)
-
-
-namespace OpKey {
+#define OPKEY_PROFILE(name) auto OPKEY_MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = Profiler::GetInstance()(name)
+#define OPKEY_PROFILE_SCOPE(name) auto OPKEY_MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = Profiler::GetInstance()("@" name)
+#define OPKEY_PROFILE_FUNCTION() OPKEY_PROFILE(__PRETTY_FUNCTION__)
+#define OPKEY_PROFILE_INTERRUPT(name) auto OPKEY_MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = Profiler::GetInstance()(name, ProfileInterruptFunctionTag{})
+#define OPKEY_PROFILE_INTERRUPT_SCOPE(name) auto OPKEY_MACRO_CONCAT(automaticProfilerGuard_, __COUNTER__) = Profiler::GetInstance()("@" name, ProfileInterruptFunctionTag{})
+#define OPKEY_PROFILE_INTERRUPT_FUNCTION() OPKEY_PROFILE_INTERRUPT(__PRETTY_FUNCTION__)
 
 
 struct ProfileInterruptFunctionTag {};
@@ -150,14 +153,21 @@ private:
 	size_t currentSection = 0;
 	int64_t resetTime = 0;
 };
-
-
-/**
- * A dummy profiler used to easily disable profiling without overhead.
- */
-class DummyProfiler {
-private:
+#else // NDEBUG
+struct Profiler {
+	static Profiler& GetInstance() {
+		static Profiler instance{};
+		return instance;
+	}
+	void Reset() { }
+	void PrintSummary() { }
+	int32_t GetResetTime() { return 0; }
 };
+#define OPKEY_PROFILE_SCOPE(name)
+#define OPKEY_PROFILE_FUNCTION()
+#define OPKEY_PROFILE_INTERRUPT_SCOPE(name)
+#define OPKEY_PROFILE_INTERRUPT_FUNCTION()
+#endif //NDEBUG
 
 
 } // namespace OpKey

@@ -7,7 +7,7 @@
 namespace OpKey {
 
 
-SpiHost::SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gpio_num_t pinMosi, gpio_num_t pinMiso, DmaChannel dmaChannel)
+SpiHost::SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gpio_num_t pinMosi, gpio_num_t pinMiso, DmaChannel dmaChannel, int maxTransferSize)
 	: initialized(true)
 	, name(std::move(name))
 	, pinSclk(pinSclk)
@@ -21,7 +21,7 @@ SpiHost::SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gp
 	busConfig.miso_io_num     = pinMiso;
 	busConfig.quadwp_io_num   = GPIO_NUM_NC;
 	busConfig.quadhd_io_num   = GPIO_NUM_NC;
-	busConfig.max_transfer_sz = 0;
+	busConfig.max_transfer_sz = maxTransferSize;
     busConfig.flags           = (SPICOMMON_BUSFLAG_MASTER | SPICOMMON_BUSFLAG_SCLK | SPICOMMON_BUSFLAG_MOSI | SPICOMMON_BUSFLAG_MISO);
     busConfig.intr_flags      = 0;
 
@@ -79,10 +79,7 @@ SpiHost& SpiHost::operator=(SpiHost&& other) noexcept {
 
 
 SpiDevice SpiHost::AddDevice(std::string devName, gpio_num_t pinCs, int clockSpeedHz, int queueSize) {
-	if (!initialized) {
-		throw std::runtime_error("cannot call AddDevice() on uninitialized SpiHost");
-	}
-
+	assert(initialized);
 	spi_device_handle_t deviceHandle = nullptr;
 
 	spi_device_interface_config_t devConfig{};

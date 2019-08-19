@@ -30,7 +30,8 @@ enum class ChannelFunction {
 // General Config
 // ================================================================
 
-inline constexpr const uint8_t Core = CONFIG_OPKEY_PINNED_TO_CORE;
+inline constexpr const uint8_t MainCore = 1;
+inline constexpr const uint8_t VisualizerCore = 0;
 
 
 // ================================================================

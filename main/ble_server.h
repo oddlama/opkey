@@ -1,6 +1,7 @@
 #pragma once
 
 #include "entt.h"
+#include "sensor_manager.h"
 
 
 namespace OpKey {
@@ -18,6 +19,7 @@ public:
 	BleServer& operator=(BleServer&&) = delete;
 
 	void OnTick();
+	void OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor);
 
 	//void OnKeyPressed(Key key, double velocity, ) {
 	//}
@@ -25,7 +27,8 @@ public:
 	//}
 
 private:
-	entt::scoped_connection tickConnection;
+	entt::scoped_connection onTickConnection;
+	entt::scoped_connection onSensorStateChangeConnection;
 };
 
 
