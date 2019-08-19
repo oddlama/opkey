@@ -89,7 +89,7 @@ public:
 		OPKEY_PROFILE_FUNCTION();
 
 		auto& slot = NextSlot();
-		auto& t_1 = Get(1); // Slot at t-1
+		auto& t_1 = Get(-1); // Slot at t-1
 
 		auto now = esp_timer_get_time();
 		slot.timestamp = now;
@@ -109,7 +109,11 @@ public:
 			slot.kinematic.position[i] = sqrt(slot.raw[i]);
 			slot.kinematic.velocity[i] = (slot.kinematic.position[i] - t_1.kinematic.position[i]) * dt;
 			slot.kinematic.acceleration[i] = (slot.kinematic.velocity[i] - t_1.kinematic.velocity[i]) * dt;
-			slot.keyState[i].pressed = slot.kinematic.position[i] > 0.3 && slot.kinematic.velocity[i] > 3.0;
+			if (not t_1.keyState[i].pressed && slot.kinematic.position[i] > 0.3 && slot.kinematic.velocity[i] > 3.0) {
+				slot.keyState[i].pressed = true;
+			} else if (t_1.keyState[i].pressed && slot.kinematic.position[i] < 0.3) {
+				slot.keyState[i].pressed = false;
+			}
 			slot.keyState[i].changed = slot.keyState[i].pressed != t_1.keyState[i].pressed;
 			if (slot.keyState[i].changed) {
 				if (slot.keyState[i].pressed) {
@@ -123,10 +127,14 @@ public:
 
 	/**
 	 * Retrieves data from the history, with 0 denoting the newest
-	 * history entry and size() - 1 the oldest.
+	 * history entry and size() - 1 the second newest.
+	 * Accessing negative elements is allowed. -1 will give the previous and (-size() + 1) the oldest
 	 */
-	inline Data& Get(size_t index) {
-		if (index >= Size()) {
+	inline Data& Get(int index) {
+		if (index < 0) {
+			index += Size();
+		}
+		if (index < 0 || index >= Size()) {
 			throw std::out_of_range("Cannot access element {} in a history of size {}"_format(index, Size()));
 		}
 
@@ -137,12 +145,11 @@ public:
 		}
 	}
 
-	/**
-	 * Retrieves data from the history, with 0 denoting the newest
-	 * history entry and size() - 1 the oldest.
-	 */
-	inline const Data& Get(size_t index) const {
-		if (index >= Size()) {
+	inline const Data& Get(int index) const {
+		if (index < 0) {
+			index += Size();
+		}
+		if (index < 0 || index >= Size()) {
 			throw std::out_of_range("Cannot access element {} in a history of size {}"_format(index, Size()));
 		}
 
@@ -153,11 +160,11 @@ public:
 		}
 	}
 
-	inline Data& operator[](size_t index) {
+	inline Data& operator[](int index) {
 		return Get(index);
 	}
 
-	inline const Data& operator[](size_t index) const {
+	inline const Data& operator[](int index) const {
 		return Get(index);
 	}
 

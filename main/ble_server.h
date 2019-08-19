@@ -1,13 +1,14 @@
 #pragma once
 
 #include "entt.h"
-#include "sensor_manager.h"
+#include "sensor.h"
 
 
 namespace OpKey {
 
 
 class Application;
+class SensorManager;
 
 class BleServer {
 public:
