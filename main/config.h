@@ -69,6 +69,18 @@ inline constexpr const int NumAdcs = 6;
 inline constexpr const size_t NumChannels = 15;
 inline constexpr const size_t DefaultMultisamples = 64;
 
+/** Returns the sensor index for a given key index */
+inline constexpr size_t GetSensorSwizzle(size_t keyIndex) {
+	// Default correction:
+	//    Sensor 0-87 = Key 87-0
+	//    Sensor 88-89 = Pedal 1-2 (Key 88-89)
+	if (keyIndex < 88) {
+		return 87 - keyIndex;
+	} else {
+		return keyIndex;
+	}
+}
+
 //Map(adcs, hspi, hspi.pinCs[0], {
 //	}
 // Maps each adc's channel to a key, or 255 for unused.[adcIndex * Ads7953::NumChannels + channelIndex] -> keyIndex [0-87]

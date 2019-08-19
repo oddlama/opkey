@@ -26,6 +26,7 @@ public:
 	SensorManager& operator=(const SensorManager&) = delete;
 	SensorManager& operator=(SensorManager&&) = delete;
 
+	const auto& GetHistory() const noexcept { return history; }
 	auto& GetOnSensorStateChangeSink() noexcept { return onSensorStateChangeSink; }
 
 	void OnTick();

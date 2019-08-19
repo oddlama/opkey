@@ -38,6 +38,7 @@ public:
  * Raw sensor data.
  */
 using RawSensorData = SensorTensor<uint16_t>;
+using SensorData = SensorTensor<double>;
 
 
 } // namespace OpKey

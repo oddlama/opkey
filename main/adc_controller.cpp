@@ -110,7 +110,7 @@ void AdcController::Read(RawSensorData& data) {
 		});
 }
 
-void AdcController::Read(SensorTensor<double>& data, uint32_t samples) {
+void AdcController::Read(SensorData& data, uint32_t samples) {
 	OPKEY_PROFILE_FUNCTION();
 
 	auto Accumulate = [&](auto i, auto val) {

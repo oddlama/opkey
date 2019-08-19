@@ -40,7 +40,7 @@ public:
 	}
 
 	void Read(RawSensorData& data);
-	void Read(SensorTensor<double>& data, uint32_t samples);
+	void Read(SensorData& data, uint32_t samples);
 
 private:
 	void InitSpi();

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "config.h"
+#include "profiler.h"
 #include "fmt.h"
 #include "sensor.h"
 #include "sensor_tensor.h"
@@ -46,15 +48,13 @@ public:
 		int64_t lastReleaseTime = -1;
 	};
 
-	struct LogicStateData {
-		SensorTensor<LogicState> keyState;
-	};
+	using LogicStateData = SensorTensor<LogicState>;
 
 	struct Data {
 		int64_t timestamp = -1;
-		RawSensorData raw{};
+		SensorData raw{};
 		KinematicData kinematic{};
-		LogicStateData state{};
+		LogicStateData keyState{};
 
 		/** Checks if this contains valid data */
 		operator bool() const noexcept {
@@ -72,24 +72,52 @@ public:
 	SensorHistory& operator=(const SensorHistory&) = delete;
 	SensorHistory& operator=(SensorHistory&&) = delete;
 
-	// TODO void AppendRaw(*) {
-	// TODO 	Data* slot = NextSlot();
-	// TODO 	slot->timestamp = esp_timer_get_time();
-	// TODO }
+	/**
+	 * Initialize the history with the given valid data
+	 */
+	void Init(SensorData& newData) {
+		OPKEY_PROFILE_FUNCTION();
+		for (int i = 0; i < Size(); ++i) {
+			Append(newData);
+		}
+	}
 
 	/**
-	 * Retrieves data from the history, with 0 denoting the newest
-	 * history entry and size() - 1 the oldest.
+	 * Calculate and append a new data point to the history
 	 */
-	Data* Get(size_t index) {
-		if (index >= Size()) {
-			throw std::out_of_range("Cannot access element {} in a history of size {}"_format(index, Size()));
+	void Append(SensorData& newData) {
+		OPKEY_PROFILE_FUNCTION();
+
+		auto& slot = NextSlot();
+		auto& t_1 = Get(1); // Slot at t-1
+
+		auto now = esp_timer_get_time();
+		slot.timestamp = now;
+
+		// Swizzle the raw data to match the sensor order
+		for (size_t i = 0; i < newData.size(); ++i) {
+			slot.raw[i] = newData[Config::GetSensorSwizzle(i)];
 		}
 
-		if (firstSlot + index >= history->data() + Size()) {
-			return firstSlot + index - Size();
-		} else {
-			return firstSlot + index;
+		// Inverse delta time between now and t_1 in [1/s]
+		double dt = 1000000.0 / (slot.timestamp - t_1.timestamp);
+
+		for (size_t i = 0; i < newData.size(); ++i) {
+			// Position is sqrt(data), because light intensity is 1/(distance^2)
+			// TODO normalize data based on calibration
+			// TODO position = sqrt(ApplyCalibration(newData[i], i));
+			slot.kinematic.position[i] = sqrt(slot.raw[i]);
+			slot.kinematic.velocity[i] = (slot.kinematic.position[i] - t_1.kinematic.position[i]) * dt;
+			slot.kinematic.acceleration[i] = (slot.kinematic.velocity[i] - t_1.kinematic.velocity[i]) * dt;
+			slot.keyState[i].pressed = slot.kinematic.position[i] > 0.3 && slot.kinematic.velocity[i] > 3.0;
+			slot.keyState[i].changed = slot.keyState[i].pressed != t_1.keyState[i].pressed;
+			if (slot.keyState[i].changed) {
+				if (slot.keyState[i].pressed) {
+					slot.keyState[i].lastPressTime = now;
+				} else {
+					slot.keyState[i].lastReleaseTime = now;
+				}
+			}
 		}
 	}
 
@@ -97,16 +125,40 @@ public:
 	 * Retrieves data from the history, with 0 denoting the newest
 	 * history entry and size() - 1 the oldest.
 	 */
-	const Data* Get(size_t index) const {
+	inline Data& Get(size_t index) {
 		if (index >= Size()) {
 			throw std::out_of_range("Cannot access element {} in a history of size {}"_format(index, Size()));
 		}
 
 		if (firstSlot + index >= history->data() + Size()) {
-			return firstSlot + index - Size();
+			return *(firstSlot + index - Size());
 		} else {
-			return firstSlot + index;
+			return *(firstSlot + index);
 		}
+	}
+
+	/**
+	 * Retrieves data from the history, with 0 denoting the newest
+	 * history entry and size() - 1 the oldest.
+	 */
+	inline const Data& Get(size_t index) const {
+		if (index >= Size()) {
+			throw std::out_of_range("Cannot access element {} in a history of size {}"_format(index, Size()));
+		}
+
+		if (firstSlot + index >= history->data() + Size()) {
+			return *(firstSlot + index - Size());
+		} else {
+			return *(firstSlot + index);
+		}
+	}
+
+	inline Data& operator[](size_t index) {
+		return Get(index);
+	}
+
+	inline const Data& operator[](size_t index) const {
+		return Get(index);
 	}
 
 	constexpr size_t Size() const noexcept {
@@ -118,7 +170,7 @@ private:
 	 * Advances the circular queue,
 	 * returning the new slot to be filled.
 	 */
-	Data* NextSlot() noexcept {
+	Data& NextSlot() noexcept {
 		Data* slot = lastSlot;
 
 		// Advance slot and wrap around if necessary
@@ -128,7 +180,7 @@ private:
 		}
 
 		firstSlot = slot;
-		return slot;
+		return *slot;
 	}
 
 	// The history data
