@@ -46,7 +46,7 @@ public:
 
 	const std::string& GetName() const noexcept { return name; }
 
-	void Transfer(uint8_t* rxData, size_t rxLen, uint8_t* txData, size_t txLen) {
+	inline void Transfer(uint8_t* rxData, size_t rxLen, uint8_t* txData, size_t txLen) {
 		spi_transaction_t transaction{};
 		transaction.flags     = 0;
 		transaction.length    = txLen * 8;
@@ -65,7 +65,7 @@ public:
 		}
 	}
 
-	void TransferPolling(uint8_t* rxData, size_t rxLen, uint8_t* txData, size_t txLen) {
+	inline void TransferPolling(uint8_t* rxData, size_t rxLen, uint8_t* txData, size_t txLen) {
 		spi_transaction_t transaction{};
 		transaction.flags     = 0;
 		transaction.length    = txLen * 8;

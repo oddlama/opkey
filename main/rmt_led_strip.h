@@ -165,8 +165,11 @@ public:
 		// "Swap" buffers (copy current state into send buffer)
 		std::copy(editBuffer.begin(), editBuffer.end(), sendBuffer.begin());
 
-		// Start transmitting the sending buffer, and do not block until completion.
-		rmt_write_sample(rmtChannel, reinterpret_cast<const uint8_t*>(sendBuffer.data()), sendBuffer.size() * sizeof(PixelType), wait);
+		// Start transmitting the sending buffer, and only block until completion if wait is set.
+		if (auto err = rmt_write_sample(rmtChannel, reinterpret_cast<const uint8_t*>(sendBuffer.data()), sendBuffer.size() * sizeof(PixelType), wait); err != ESP_OK) {
+			esp::logw("rmt_write_sample() in RmtLedStrip::Update() returned {}", esp_err_to_name(err));
+			return;
+		}
 	}
 
 	void Clear() {
@@ -193,7 +196,6 @@ private:
 		, size_t* translatedSize
 		, size_t* itemNum
 	) {
-		OPKEY_PROFILE_INTERRUPT_FUNCTION();
 		size_t size = 0;
 
 		for (const uint8_t* curSrc = static_cast<const uint8_t*>(src); size * 8 < wantedNum; ++curSrc) {

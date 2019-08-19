@@ -7,6 +7,9 @@
 #include <stack>
 #include <string_view>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 
 namespace OpKey {
 
@@ -56,9 +59,13 @@ class Profiler {
 	friend class ProfilerSectionGuard;
 
 public:
+	static std::array<Profiler, 2>& GetInstances() {
+		static std::array<Profiler, 2> instances{};
+		return instances;
+	}
+
 	static Profiler& GetInstance() {
-		static Profiler instance{};
-		return instance;
+		return GetInstances()[xPortGetCoreID()];
 	}
 
 private:
@@ -155,13 +162,16 @@ private:
 };
 #else // NDEBUG
 struct Profiler {
-	static Profiler& GetInstance() {
-		static Profiler instance{};
-		return instance;
+	static std::array<Profiler, 2>& GetInstances() noexcept {
+		static std::array<Profiler, 2> instances{};
+		return instances;
 	}
-	void Reset() { }
-	void PrintSummary() { }
-	int32_t GetResetTime() { return 0; }
+	static Profiler& GetInstance() noexcept {
+		return GetInstances()[xPortGetCoreID()];
+	}
+	void Reset() noexcept { }
+	void PrintSummary() noexcept { }
+	int32_t GetResetTime() noexcept { return 0; }
 };
 #define OPKEY_PROFILE_SCOPE(name)
 #define OPKEY_PROFILE_FUNCTION()

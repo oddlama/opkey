@@ -12,8 +12,10 @@ SensorManager::SensorManager(Application& application)
 
 void SensorManager::OnTick() {
 	OPKEY_PROFILE_FUNCTION();
-	RawSensorData d;
-	adcController.Read(d);
+	//RawSensorData d;
+	SensorTensor<double> data{};
+	//adcController.Read(data);
+	adcController.Read(data, 8);
 	//history.
 	//adcController.Read(buffer, Settings::GetMultisamples());
 }

@@ -77,7 +77,7 @@ void AdcController::InitAdcs() {
 	auto continueOperation = Ads7953::ContinueOperation{};
 	*continueOperationTx = continueOperation.ToCommand();
 
-	for (int i = 0; i < 15*6; ++i) {
+	for (int i = 0; i < Config::NumAdcs * Config::NumChannels; ++i) {
 		continueOperationTransactions[i].flags     = 0;
 		continueOperationTransactions[i].length    = continueOperationTx->data.size() * 8;
 		continueOperationTransactions[i].tx_buffer = continueOperationTx->data.data();
@@ -105,32 +105,20 @@ void AdcController::InitAdcs() {
 void AdcController::Read(RawSensorData& data) {
 	OPKEY_PROFILE_FUNCTION();
 
-	int multisamples = 10;
-	//for (int a = 0; a < Config::NumAdcs; ++a) {
-	//	auto busGuard = adcs[a].AcquireBus();
-	//	for (int s = 0; s < multisamples; ++s) {
-	//		for (int c = 0; c < Config::NumChannels; ++c) {
-	//			adcs[a].TransferPolling(continueOperationTransactions[c]);
-	//			data[a * Config::NumChannels + rx.GetChannel()] = rx.GetValue();
-	//		}
-	//		//for (int c = 0; c < Config::NumChannels; ++c) {
-	//		//	auto& rx = (*continueOperationRxs)[c];
-	//		//	data[a * Config::NumChannels + rx.GetChannel()] = rx.GetValue();
-	//		//}
-	//	}
-	//}
-	for (int s = 0; s < multisamples; ++s) {
-		for (int a = 0; a < Config::NumAdcs; ++a) {
-			auto busGuard = adcs[a].AcquireBus();
-			for (int c = 0; c < Config::NumChannels; ++c) {
-				adcs[a].TransferPolling(continueOperationTransactions[a*15+c]);
-				//spi_device_polling_transmit(*reinterpret_cast<spi_device_handle_t*>(&adcs[a]), &continueOperationTransactions[a*15+c]);
-			}
-		}
-		//for (int c = 0; c < Config::NumChannels; ++c) {
-		//	for (int a = 0; a < Config::NumAdcs; ++a) {
-		//	}
-		//}
+	Read([&](auto i, auto val) {
+			data[i] = val;
+		});
+}
+
+void AdcController::Read(SensorTensor<double>& data, uint32_t samples) {
+	OPKEY_PROFILE_FUNCTION();
+
+	auto Accumulate = [&](auto i, auto val) {
+			data[i] += double(val) / (samples * Ads7953::MaxValue);
+		};
+
+	for (int s = 0; s < samples; ++s) {
+		Read(Accumulate);
 	}
 }
 

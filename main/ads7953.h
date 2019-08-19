@@ -8,6 +8,7 @@
 namespace OpKey::Ads7953 {
 
 
+inline constexpr static const uint16_t MaxValue = 0x1000;
 inline constexpr static const uint8_t NumChannels = 16;
 
 
