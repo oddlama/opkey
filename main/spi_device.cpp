@@ -9,10 +9,7 @@ namespace OpKey {
 SpiDevice::AcquireGuard::AcquireGuard(SpiDevice& spiDevice)
 	: spiDevice(spiDevice)
 {
-	if (auto rc = spi_device_acquire_bus(spiDevice.handle, portMAX_DELAY); rc != ESP_OK) {
-		esp::loge("spi_device_acquire_bus(SpiDevice{{name='{}'}}) returned {}", spiDevice.name, esp_err_to_name(rc));
-		throw std::runtime_error("spi_device_acquire_bus(SpiHost{{name='{}'}}) returned {}"_format(spiDevice.name, esp_err_to_name(rc)));
-	}
+	esp::check(spi_device_acquire_bus(spiDevice.handle, portMAX_DELAY), "spi_device_acquire_bus(SpiDevice{{name='{}'}})", spiDevice.name);
 }
 
 SpiDevice::AcquireGuard::~AcquireGuard() noexcept {

@@ -60,8 +60,8 @@ public:
 	inline void Transfer(spi_transaction_t& transaction) {
 		assert(handle != nullptr);
 
-		if (auto rc = spi_device_transmit(handle, &transaction); rc != ESP_OK) {
-			esp::loge("spi_device_transmit(SpiDevice{{name='{}'}}) returned {}", name, rc);
+		if (auto error = spi_device_transmit(handle, &transaction); error != ESP_OK) {
+			esp::loge("spi_device_transmit(SpiDevice{{name='{}'}}) returned {}", name, error);
 		}
 	}
 
@@ -79,8 +79,8 @@ public:
 	inline void TransferPolling(spi_transaction_t& transaction) {
 		assert(handle != nullptr);
 
-		if (auto rc = spi_device_polling_transmit(handle, &transaction); rc != ESP_OK) {
-			esp::loge("spi_device_polling_transmit(SpiDevice{{name='{}'}}) returned {}", name, rc);
+		if (auto error = spi_device_polling_transmit(handle, &transaction); error != ESP_OK) {
+			esp::loge("spi_device_polling_transmit(SpiDevice{{name='{}'}}) returned {}", name, error);
 		}
 	}
 

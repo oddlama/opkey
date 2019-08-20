@@ -5,7 +5,6 @@
 
 #include <driver/rmt.h>
 #include <driver/gpio.h>
-#include <esp_err.h>
 
 #include <array>
 #include <stdexcept>
@@ -102,23 +101,9 @@ public:
 		config.tx_config.idle_output_en  = true;
 		config.tx_config.idle_level      = RMT_IDLE_LEVEL_LOW;
 
-		auto errRc = rmt_config(&config);
-		if (errRc != ESP_OK) {
-			esp::loge("rmt_config() returned {}", esp_err_to_name(errRc));
-			throw std::runtime_error("rmt_config() returned {}"_format(esp_err_to_name(errRc)));
-		}
-
-		errRc = rmt_driver_install(this->rmtChannel, 0, 0);
-		if (errRc != ESP_OK) {
-			esp::loge("rmt_driver_install() returned {}", esp_err_to_name(errRc));
-			throw std::runtime_error("rmt_driver_install() returned {}"_format(esp_err_to_name(errRc)));
-		}
-
-		errRc = rmt_translator_init(this->rmtChannel, RmtTranslate);
-		if (errRc != ESP_OK) {
-			esp::loge("rmt_translator_init() returned {}", esp_err_to_name(errRc));
-			throw std::runtime_error("rmt_translator_init() returned {}"_format(esp_err_to_name(errRc)));
-		}
+		esp::check(rmt_config(&config), "rmt_config()");
+		esp::check(rmt_driver_install(this->rmtChannel, 0, 0), "rmt_driver_install()");
+		esp::check(rmt_translator_init(this->rmtChannel, RmtTranslate), "rmt_translator_init()");
 	}
 
 	RmtLedStrip(const RmtLedStrip&) noexcept = default;

@@ -1,8 +1,6 @@
 #include "spi_host.h"
 #include "fmt.h"
 
-#include <esp_err.h>
-
 
 namespace OpKey {
 
@@ -33,12 +31,7 @@ SpiHost::SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gp
 		case HostDevice::Vspi: this->hostDevice = VSPI_HOST; break;
 	}
 
-	auto errRc = spi_bus_initialize(this->hostDevice, &busConfig, static_cast<int>(dmaChannel));
-	if (errRc != ESP_OK) {
-		esp::loge("spi_bus_initialize() returned {}", esp_err_to_name(errRc));
-		throw std::runtime_error("spi_bus_initialize() returned {}"_format(esp_err_to_name(errRc)));
-	}
-
+	esp::check(spi_bus_initialize(this->hostDevice, &busConfig, static_cast<int>(dmaChannel)), "spi_bus_initialize()");
 	esp::logi("Initialized SpiHost{{name='{}', hostDevice={}, pinSclk={}, pinMosi={}, pinMiso={}}}"
 		, this->name
 		, hostDevice
@@ -50,7 +43,7 @@ SpiHost::SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gp
 
 SpiHost::~SpiHost() noexcept {
 	if (initialized) {
-		ESP_ERROR_CHECK(spi_bus_free(hostDevice));
+		esp::check(spi_bus_free(hostDevice), "spi_bus_free()");
 		esp::logi("Removed SpiHost{{name='{}', hostDevice={}}}", name, hostDevice);
 	}
 }
@@ -97,12 +90,7 @@ SpiDevice SpiHost::AddDevice(std::string devName, gpio_num_t pinCs, int clockSpe
 	devConfig.pre_cb           = nullptr;
 	devConfig.post_cb          = nullptr;
 
-	auto errRc = spi_bus_add_device(hostDevice, &devConfig, &deviceHandle);
-	if (errRc != ESP_OK) {
-		esp::loge("spi_bus_add_device(SpiHost{{name='{}'}}) returned {}", name, esp_err_to_name(errRc));
-		throw std::runtime_error("spi_bus_add_device(SpiHost{{name='{}'}}) returned {}"_format(name, esp_err_to_name(errRc)));
-	}
-
+	esp::check(spi_bus_add_device(hostDevice, &devConfig, &deviceHandle), "spi_bus_add_device(SpiHost{{name='{}'}})", name);
 	return SpiDevice{std::move(devName), std::move(deviceHandle)};
 }
 
