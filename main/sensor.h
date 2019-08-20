@@ -28,6 +28,14 @@ public:
 	size_t GetPedalIndex() const noexcept { return index - 88; }
 	size_t GetKeyIndex() const noexcept { return index; }
 
+	template<typename F>
+	static inline void ForEachKey(F&& f) noexcept(noexcept(f(Sensor{}))) {
+		Sensor key{};
+		for (key.index = KeyOffset; key.index < KeyOffset + KeyCount; ++key.index) {
+			f(key);
+		}
+	}
+
 private:
 	size_t index = 0;
 };

@@ -40,6 +40,7 @@ public:
 public:
 	void operator()();
 
+	const auto& GetSensorManager() const noexcept { return sensorManager; }
 	auto& GetOnTickSink() noexcept { return onTickSink; }
 	auto& GetOnSensorStateChangeSink() noexcept { return sensorManager.GetOnSensorStateChangeSink(); }
 

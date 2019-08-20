@@ -120,9 +120,6 @@ void AdcController::Read(SensorData& data, uint32_t samples) {
 	for (int s = 0; s < samples; ++s) {
 		Read(Accumulate);
 	}
-
-	//TODO AWAY static int i = 0;
-	//TODO AWAY data[0] = (i++ % 3) / 3.0;
 }
 
 

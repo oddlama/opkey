@@ -23,46 +23,7 @@ namespace OpKey {
 template<size_t N>
 class SensorHistory {
 public:
-	/**
-	 * Kinematic sensor data calculated from raw value and
-	 * previous data points.
-	 */
-	struct KinematicData {
-		SensorTensor<double> position{};
-		SensorTensor<double> velocity{};
-		SensorTensor<double> acceleration{};
-	};
-
-	/**
-	 * Logical state which is calculated based on the captured
-	 * history of sensor data
-	 */
-	struct LogicState {
-		// Key/Pedal is currently pressed
-		bool pressed = false;
-		// Key/Pedal state has changed regarding to the last known state
-		bool changed = false;
-		// Last known time this key/pedal was pressed
-		int64_t lastPressTime = -1;
-		// Last known time this key/pedal was released
-		int64_t lastReleaseTime = -1;
-	};
-
-	using LogicStateData = SensorTensor<LogicState>;
-
-	struct Data {
-		int64_t timestamp = -1;
-		SensorData raw{};
-		KinematicData kinematic{};
-		LogicStateData keyState{};
-
-		/** Checks if this contains valid data */
-		operator bool() const noexcept {
-			return timestamp >= 0;
-		}
-	};
-
-	using History = std::array<Data, N>;
+	using History = std::array<SensorDataCollection, N>;
 
 public:
 	SensorHistory() = default;
@@ -88,38 +49,40 @@ public:
 	void Append(SensorData& newData) {
 		OPKEY_PROFILE_FUNCTION();
 
-		auto& slot = NextSlot();
-		auto& t_1 = Get(-1); // Slot at t-1
+		auto& t_0 = NextSlot();
+		auto& t_1 = Get(-1); // Previous state
 
 		auto now = esp_timer_get_time();
-		slot.timestamp = now;
+		t_0.timestamp = now;
 
 		// Swizzle the raw data to match the sensor order
 		for (size_t i = 0; i < newData.size(); ++i) {
-			slot.raw[i] = newData[Config::GetSensorSwizzle(i)];
+			t_0.raw[i] = newData[Config::GetSensorSwizzle(i)];
 		}
 
 		// Inverse delta time between now and t_1 in [1/s]
-		double dt = 1000000.0 / (slot.timestamp - t_1.timestamp);
+		double dt = 1000000.0 / (t_0.timestamp - t_1.timestamp);
 
 		for (size_t i = 0; i < newData.size(); ++i) {
 			// Position is sqrt(data), because light intensity is 1/(distance^2)
 			// TODO normalize data based on calibration
 			// TODO position = sqrt(ApplyCalibration(newData[i], i));
-			slot.kinematic.position[i] = sqrt(slot.raw[i]);
-			slot.kinematic.velocity[i] = (slot.kinematic.position[i] - t_1.kinematic.position[i]) * dt;
-			slot.kinematic.acceleration[i] = (slot.kinematic.velocity[i] - t_1.kinematic.velocity[i]) * dt;
-			if (not t_1.keyState[i].pressed && slot.kinematic.position[i] > 0.3 && slot.kinematic.velocity[i] > 3.0) {
-				slot.keyState[i].pressed = true;
-			} else if (t_1.keyState[i].pressed && slot.kinematic.position[i] < 0.3) {
-				slot.keyState[i].pressed = false;
+			t_0.kinematic.position[i] = sqrt(t_0.raw[i]);
+			t_0.kinematic.velocity[i] = (t_0.kinematic.position[i] - t_1.kinematic.position[i]) * dt;
+			t_0.kinematic.acceleration[i] = (t_0.kinematic.velocity[i] - t_1.kinematic.velocity[i]) * dt;
+
+			t_0.keyState[i] = t_1.keyState[i];
+			if (not t_1.keyState[i].pressed && t_0.kinematic.position[i] > 0.4 && t_0.kinematic.velocity[i] > 3.0) {
+				t_0.keyState[i].pressed = true;
+			} else if (t_1.keyState[i].pressed && t_0.kinematic.position[i] < 0.4) {
+				t_0.keyState[i].pressed = false;
 			}
-			slot.keyState[i].changed = slot.keyState[i].pressed != t_1.keyState[i].pressed;
-			if (slot.keyState[i].changed) {
-				if (slot.keyState[i].pressed) {
-					slot.keyState[i].lastPressTime = now;
+			t_0.keyState[i].changed = (t_0.keyState[i].pressed != t_1.keyState[i].pressed);
+			if (t_0.keyState[i].changed) {
+				if (t_0.keyState[i].pressed) {
+					t_0.keyState[i].lastPressTime = now;
 				} else {
-					slot.keyState[i].lastReleaseTime = now;
+					t_0.keyState[i].lastReleaseTime = now;
 				}
 			}
 		}
@@ -130,41 +93,31 @@ public:
 	 * history entry and size() - 1 the second newest.
 	 * Accessing negative elements is allowed. -1 will give the previous and (-size() + 1) the oldest
 	 */
-	inline Data& Get(int index) {
+	inline SensorDataCollection& Get(int index) {
 		if (index < 0) {
 			index += Size();
 		}
 		if (index < 0 || index >= Size()) {
 			throw std::out_of_range("Cannot access element {} in a history of size {}"_format(index, Size()));
 		}
-
-		if (firstSlot + index >= history->data() + Size()) {
-			return *(firstSlot + index - Size());
-		} else {
-			return *(firstSlot + index);
-		}
+		return history->data()[(currentSlot + index) % Size()];
 	}
 
-	inline const Data& Get(int index) const {
+	inline const SensorDataCollection& Get(int index) const {
 		if (index < 0) {
 			index += Size();
 		}
 		if (index < 0 || index >= Size()) {
 			throw std::out_of_range("Cannot access element {} in a history of size {}"_format(index, Size()));
 		}
-
-		if (firstSlot + index >= history->data() + Size()) {
-			return *(firstSlot + index - Size());
-		} else {
-			return *(firstSlot + index);
-		}
+		return history->data()[(currentSlot + index) % Size()];
 	}
 
-	inline Data& operator[](int index) {
+	inline SensorDataCollection& operator[](int index) {
 		return Get(index);
 	}
 
-	inline const Data& operator[](int index) const {
+	inline const SensorDataCollection& operator[](int index) const {
 		return Get(index);
 	}
 
@@ -177,26 +130,16 @@ private:
 	 * Advances the circular queue,
 	 * returning the new slot to be filled.
 	 */
-	Data& NextSlot() noexcept {
-		Data* slot = lastSlot;
-
+	SensorDataCollection& NextSlot() noexcept {
 		// Advance slot and wrap around if necessary
-		++lastSlot;
-		if (lastSlot >= history->data() + history->size()) {
-			lastSlot = history->data();
-		}
-
-		firstSlot = slot;
-		return *slot;
+		currentSlot = (currentSlot + 1) % Size();
+		return history->data()[currentSlot];
 	}
 
 	// The history data
 	std::unique_ptr<History> history = std::make_unique<History>();
-
-	// The first slot (newest entry)
-	Data* firstSlot = history->data();
-	// The last slot (oldest entry, next acquired)
-	Data* lastSlot = history->data();
+	// The current slot (newest entry)
+	size_t currentSlot = 0;
 };
 
 

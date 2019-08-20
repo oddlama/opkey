@@ -5,6 +5,7 @@
 #include "rmt_led_strip.h"
 #include "spinlock.h"
 #include "sensor.h"
+#include "sensor_manager.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -34,18 +35,24 @@ public:
 	void OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor);
 
 private:
+	// Task related stuff
 	xTaskHandle taskHandle = nullptr;
 	Spinlock spinlock{};
 	bool needsUpdate = false;
+	const SensorLogicStateData* logicStateData = nullptr;
 
 #ifndef NDEBUG
 	int64_t debugLedFpsTime = 0;
 	int64_t debugLedFpsCount = 0;
 #endif
 
-	RmtLedStrip<PixelRgbw, RmtTimingsSk6812> ledStrip{GPIO_NUM_32, 288};
+	// Signals
 	entt::scoped_connection onTickConnection;
 	entt::scoped_connection onSensorStateChangeConnection;
+
+	// Led strip and sensor manager ref
+	RmtLedStrip<PixelRgbw, RmtTimingsSk6812> ledStrip{GPIO_NUM_32, 88 * 2};
+	const SensorManager& sensorManager;
 };
 
 

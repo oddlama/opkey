@@ -23,12 +23,12 @@ void SensorManager::OnTick() {
 	history.Append(data);
 
 	// Notify listeners if a key state has changed
-	const auto& h0 = history[0];
-	for (size_t i = Sensor::KeyOffset; i < Sensor::KeyCount; ++i) {
-		if (h0.keyState[i].changed) {
-			onSensorStateChangeSignal.publish(*this, Sensor{i});
+	const auto& t_0 = history[0];
+	Sensor::ForEachKey([&](Sensor key) {
+		if (t_0.keyState[key].changed) {
+			onSensorStateChangeSignal.publish(*this, key);
 		}
-	}
+	});
 }
 
 

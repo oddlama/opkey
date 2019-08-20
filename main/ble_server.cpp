@@ -16,11 +16,11 @@ void BleServer::OnTick() {
 }
 
 void BleServer::OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor) {
-	auto& h0 = sensorManager.GetHistory()[0];
-	auto& keyState = h0.keyState[sensor];
-	auto& keyPos = h0.kinematic.position[sensor];
-	auto& keyVel = h0.kinematic.velocity[sensor];
-	auto& keyAcc = h0.kinematic.acceleration[sensor];
+	auto& t_0 = sensorManager.GetHistory()[0];
+	auto& keyState = t_0.keyState[sensor];
+	auto& keyPos = t_0.kinematic.position[sensor];
+	auto& keyVel = t_0.kinematic.velocity[sensor];
+	auto& keyAcc = t_0.kinematic.acceleration[sensor];
 	if (keyState.pressed) {
 		fmt::print("key[{:2d}] down  pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n", static_cast<size_t>(sensor), keyPos, keyVel, keyAcc);
 	} else {
