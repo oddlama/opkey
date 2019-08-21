@@ -10,14 +10,14 @@ namespace OpKey {
 class Application;
 class SensorManager;
 
-class BleServer {
+class BleInterface {
 public:
-	BleServer(Application& application);
+	BleInterface(Application& application);
 
-	BleServer(const BleServer&) = default;
-	BleServer(BleServer&&) = default;
-	BleServer& operator=(const BleServer&) = delete;
-	BleServer& operator=(BleServer&&) = delete;
+	BleInterface(const BleInterface&) = default;
+	BleInterface(BleInterface&&) = default;
+	BleInterface& operator=(const BleInterface&) = delete;
+	BleInterface& operator=(BleInterface&&) = delete;
 
 	void OnTick();
 	void OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor);

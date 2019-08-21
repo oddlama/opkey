@@ -5,7 +5,7 @@
 #include "config.h"
 #include "profiler.h"
 #include "sensor_manager.h"
-#include "ble_server.h"
+#include "ble_interface.h"
 #include "visualizer.h"
 #include "statistics.h"
 
@@ -51,7 +51,7 @@ private:
 
 	// Different components
 	SensorManager sensorManager{*this};
-	BleServer bleServer{*this};
+	BleInterface bleInterface{*this};
 	Visualizer visualizer{*this};
 	Statistics statistics{*this};
 };

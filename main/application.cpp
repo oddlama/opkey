@@ -1,6 +1,7 @@
 #include "application.h"
 #include "dma.h"
 #include "error_visualizer.h"
+#include "nvs.h"
 
 #include <esp_timer.h>
 
@@ -57,6 +58,8 @@ void Application::StartTask() {
 
 
 void Application::operator()() {
+	OpKey::Nvs::Init();
+
 	auto& profiler = Profiler::GetInstance();
 
 	profiler.PrintSummary();

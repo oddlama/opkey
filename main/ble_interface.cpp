@@ -3,7 +3,6 @@
 #include "application.h"
 #include "sensor_manager.h"
 
-#include <nvs_flash.h>
 #include <esp_nimble_hci.h>
 #include <nimble/nimble_port.h>
 #include <nimble/nimble_port_freertos.h>
@@ -489,17 +488,10 @@ static void NimbleHostTask(void* param) {
 }
 
 
-BleServer::BleServer(Application& application)
-	: onTickConnection(application.GetOnTickSink().connect<&BleServer::OnTick>(*this))
-	, onSensorStateChangeConnection(application.GetOnSensorStateChangeSink().connect<&BleServer::OnSensorStateChange>(*this))
+BleInterface::BleInterface(Application& application)
+	: onTickConnection(application.GetOnTickSink().connect<&BleInterface::OnTick>(*this))
+	, onSensorStateChangeConnection(application.GetOnSensorStateChangeSink().connect<&BleInterface::OnSensorStateChange>(*this))
 {
-	// TODO nvs own class?
-	/* Initialize NVS — it is used to store PHY calibration data */
-	if (nvs_flash_init() != ESP_OK) {
-		esp::check(nvs_flash_erase(), "nvs_flash_erase()");
-		esp::check(nvs_flash_init(), "nvs_flash_init()");
-	}
-
 	esp::check(esp_nimble_hci_and_controller_init(), "esp_nimble_hci_and_controller_init()");
 	nimble_port_init();
 
@@ -526,11 +518,11 @@ BleServer::BleServer(Application& application)
 	nimble_port_freertos_init(NimbleHostTask);
 }
 
-void BleServer::OnTick() {
+void BleInterface::OnTick() {
 	OPKEY_PROFILE_FUNCTION();
 }
 
-void BleServer::OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor) {
+void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor) {
 	auto& t_0 = sensorManager.GetHistory()[0];
 	auto& keyState = t_0.keyState[sensor];
 	auto& keyPos = t_0.kinematic.position[sensor];
