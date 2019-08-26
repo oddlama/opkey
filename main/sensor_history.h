@@ -9,7 +9,6 @@
 #include <esp_timer.h>
 
 #include <stdexcept>
-#include <memory>
 #include <array>
 
 
@@ -22,16 +21,15 @@ namespace OpKey {
  */
 template<size_t N>
 class SensorHistory {
-public:
-	using History = std::array<SensorDataCollection, N>;
+	static_assert(N >= 2, "SensorHistory may not contain less than 2 data points");
 
 public:
 	SensorHistory() = default;
 
-	SensorHistory(const SensorHistory&) = default;
+	SensorHistory(const SensorHistory&) = delete;
 	SensorHistory(SensorHistory&&) = default;
 	SensorHistory& operator=(const SensorHistory&) = delete;
-	SensorHistory& operator=(SensorHistory&&) = delete;
+	SensorHistory& operator=(SensorHistory&&) = default;
 
 	/**
 	 * Initialize the history with the given valid data
@@ -100,7 +98,7 @@ public:
 		if (index < 0 || index >= Size()) {
 			throw std::out_of_range("Cannot access element {} in a history of size {}"_format(index, Size()));
 		}
-		return history->data()[(currentSlot + index) % Size()];
+		return history[(currentSlot + index) % Size()];
 	}
 
 	inline const SensorDataCollection& Get(int index) const {
@@ -110,7 +108,7 @@ public:
 		if (index < 0 || index >= Size()) {
 			throw std::out_of_range("Cannot access element {} in a history of size {}"_format(index, Size()));
 		}
-		return history->data()[(currentSlot + index) % Size()];
+		return history[(currentSlot + index) % Size()];
 	}
 
 	inline SensorDataCollection& operator[](int index) {
@@ -133,11 +131,11 @@ private:
 	SensorDataCollection& NextSlot() noexcept {
 		// Advance slot and wrap around if necessary
 		currentSlot = (currentSlot + 1) % Size();
-		return history->data()[currentSlot];
+		return history[currentSlot];
 	}
 
 	// The history data
-	std::unique_ptr<History> history = std::make_unique<History>();
+	std::array<SensorDataCollection, N> history{};
 	// The current slot (newest entry)
 	size_t currentSlot = 0;
 };

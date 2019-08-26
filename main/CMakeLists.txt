@@ -6,9 +6,11 @@ set(COMPONENT_SRCS
 	adc_controller.cpp
 	statistics.cpp
 	visualizer.cpp
-	ble_server.cpp
+	ble_interface.cpp
 	application.cpp
 	sensor_manager.cpp
+	nvs.cpp
+	ble.cpp
 	)
 
 set(COMPONENT_ADD_INCLUDEDIRS ".")

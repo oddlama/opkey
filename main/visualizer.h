@@ -51,7 +51,7 @@ private:
 	entt::scoped_connection onSensorStateChangeConnection;
 
 	// Led strip and sensor manager ref
-	RmtLedStrip<PixelRgbw, RmtTimingsSk6812> ledStrip{GPIO_NUM_32, 88 * 2};
+	RmtLedStrip<PixelRgbw, RmtTimingsSk6812, 88 * 2> ledStrip{GPIO_NUM_32};
 	const SensorManager& sensorManager;
 };
 

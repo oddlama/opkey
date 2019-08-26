@@ -17,10 +17,10 @@ uint8_t midiPacket[] = {
 	0x00   // velocity
 };
 
-
 [[noreturn]] void Application::TaskMain(void*) {
 	try {
-		Application{}();
+		static Application application{};
+		application();
 	} catch(OpKeyException& e) {
 		esp::loge("Caught exception: {}\nDevice will abort() and restart in 60 seconds.", e.what());
 

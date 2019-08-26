@@ -78,17 +78,13 @@ struct RmtTimingsApa106 : public RmtTimings {
 };
 
 
-template<typename PixelType, typename TimingPolicy>
+template<typename PixelType, typename TimingPolicy, size_t N>
 class RmtLedStrip {
 public:
-	RmtLedStrip(gpio_num_t pin, size_t pixelCount, rmt_channel_t rmtChannel = RMT_CHANNEL_0, int rmtMemBlockNum = 8)
+	RmtLedStrip(gpio_num_t pin, rmt_channel_t rmtChannel = RMT_CHANNEL_0, int rmtMemBlockNum = 8)
 		: rmtChannel(rmtChannel)
-		, pixelCount(pixelCount)
 	{
-		esp::logi("Initialized RmtLedStrip{{pin={}, pixelCount={}, rmtChannel={}, rmtMemBlockNum={}}}", pin, pixelCount, rmtChannel, rmtMemBlockNum);
-		editBuffer.resize(pixelCount);
-		sendBuffer.resize(pixelCount);
-
+		esp::logi("Initialized RmtLedStrip<..., {:d}>{{pin={}, rmtChannel={}, rmtMemBlockNum={}}}", N, pin, rmtChannel, rmtMemBlockNum);
 		rmt_config_t config{};
 		config.rmt_mode                  = RMT_MODE_TX;
 		config.channel                   = this->rmtChannel;
@@ -117,15 +113,15 @@ public:
 	}
 
 	const PixelType& operator[](size_t i) const {
-		if (i > pixelCount) {
-			throw std::out_of_range("Cannot access pixel {} in a RmtLedStrip of {} pixels"_format(i, pixelCount));
+		if (i > N) {
+			throw std::out_of_range("Cannot access pixel {} in a RmtLedStrip of {} pixels"_format(i, N));
 		}
 		return editBuffer[i];
 	}
 
 	PixelType& operator[](size_t i) {
-		if (i > pixelCount) {
-			throw std::out_of_range("Cannot access pixel {} in a RmtLedStrip of {} pixels"_format(i, pixelCount));
+		if (i > N) {
+			throw std::out_of_range("Cannot access pixel {} in a RmtLedStrip of {} pixels"_format(i, N));
 		}
 		return editBuffer[i];
 	}
@@ -163,7 +159,7 @@ public:
 		}
 	}
 
-	size_t Size() const noexcept { return pixelCount; }
+	constexpr size_t Size() const noexcept { return N; }
 
 	auto cbegin() const { return editBuffer.cbegin(); }
 	auto begin() const { return editBuffer.begin(); }
@@ -207,10 +203,9 @@ private:
 
 private:
 	rmt_channel_t rmtChannel;
-	size_t pixelCount;
 
-	std::vector<PixelType> editBuffer{};
-	std::vector<PixelType> sendBuffer{};
+	std::array<PixelType, N> editBuffer{};
+	std::array<PixelType, N> sendBuffer{};
 };
 
 
