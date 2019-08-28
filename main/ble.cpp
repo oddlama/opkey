@@ -42,7 +42,7 @@ static ble_uuid16_t UUID16_INIT(uint16_t val) {
 static ble_uuid128_t UUID128_INIT(std::array<uint8_t, 16> value) {
 	ble_uuid128_t ret{};
 	ret.u.type = BLE_UUID_TYPE_128;
-	std::copy(ret.value, ret.value + 16, value.begin());
+	std::copy(value, value + 16, ret.value);
 	return ret;
 }
 

@@ -10,7 +10,7 @@ template<uint32_t A, uint16_t B, uint16_t C, uint16_t D, uint64_t E>
 struct Uuid128 : private UuidTag {
 	static_assert(E <= 0xffffffffffff, "Invalid service uuid128: Template argument 'E' is out of range");
 
-	inline constexpr static const std::array<uint8_t, 16> Bytes =
+	inline static constexpr const std::array<uint8_t, 16> bytes =
 		{ static_cast<uint8_t>(E >>  0)
 		, static_cast<uint8_t>(E >>  8)
 		, static_cast<uint8_t>(E >> 16)
@@ -29,20 +29,40 @@ struct Uuid128 : private UuidTag {
 		, static_cast<uint8_t>(A >> 24)
 		};
 
-	constexpr static uint16_t As16Bit() noexcept {
+	inline static constexpr const ble_uuid128_t nimbleUuid = ToNimbleUuid();
+
+	static constexpr uint16_t As16Bit() noexcept {
 		return static_cast<uint16_t>(A);
+	};
+
+private:
+	static constexpr const ble_uuid128_t ToNimbleUuid() noexcept {
+		ble_uuid128_t ret{};
+		ret.u.type = BLE_UUID_TYPE_128;
+		std::copy(bytes.begin(), bytes.end(), ret.value);
+		return ret;
 	};
 };
 
 template<uint16_t A>
 struct Uuid16 : private UuidTag {
-	inline constexpr static const std::array<uint8_t, 2> Bytes =
+	inline static constexpr const std::array<uint8_t, 2> bytes =
 		{ static_cast<uint8_t>(A >> 0)
 		, static_cast<uint8_t>(A >> 8)
 		};
 
-	constexpr static uint16_t As16Bit() noexcept {
+	inline static constexpr const ble_uuid16_t nimbleUuid = ToNimbleUuid();
+
+	static constexpr uint16_t As16Bit() noexcept {
 		return A;
+	};
+
+private:
+	static constexpr const ble_uuid16_t ToNimbleUuid() noexcept {
+		ble_uuid16_t ret{};
+		ret.u.type = BLE_UUID_TYPE_16;
+		std::copy(bytes.begin(), bytes.end(), reinterpret_cast<const uint8_t*>(bytes.data()));
+		return ret;
 	};
 };
 
