@@ -6,7 +6,7 @@
 #include <string>
 
 
-namespace OpKey {
+namespace opkey {
 
 
 class SpiHost;
@@ -94,4 +94,4 @@ private:
 };
 
 
-} // namespace OpKey
+} // namespace opkey

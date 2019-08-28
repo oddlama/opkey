@@ -1,10 +1,10 @@
 #pragma once
 
 
-namespace OpKey::Nvs {
+namespace opkey::nvs {
 
 
 static void Init();
 
 
-} // namespace OpKey::Nvs
+} // namespace opkey::nvs

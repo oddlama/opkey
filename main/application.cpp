@@ -6,7 +6,7 @@
 #include <esp_timer.h>
 
 
-namespace OpKey {
+namespace opkey {
 
 
 uint8_t midiPacket[] = {
@@ -53,12 +53,12 @@ uint8_t midiPacket[] = {
 
 void Application::StartTask() {
 	xTaskHandle taskHandle = nullptr;
-	xTaskCreatePinnedToCore(&TaskMain, "OpKey", 0x10000, nullptr, tskIDLE_PRIORITY + 1, &taskHandle, OpKey::Config::MainCore);
+	xTaskCreatePinnedToCore(&TaskMain, "OpKey", 0x10000, nullptr, tskIDLE_PRIORITY + 1, &taskHandle, opkey::config::MainCore);
 }
 
 
 void Application::operator()() {
-	OpKey::Nvs::Init();
+	opkey::nvs::Init();
 
 	auto& profiler = Profiler::GetInstance();
 
@@ -80,4 +80,4 @@ void Application::operator()() {
 }
 
 
-} // namespace OpKey
+} // namespace opkey

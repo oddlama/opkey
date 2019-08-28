@@ -1,7 +1,7 @@
 #pragma once
 
 
-namespace OpKey {
+namespace opkey {
 
 
 class Settings {
@@ -10,4 +10,4 @@ private:
 };
 
 
-} // namespace OpKey
+} // namespace opkey

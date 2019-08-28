@@ -11,15 +11,14 @@
 #include <services/gatt/ble_svc_gatt.h>
 
 
-namespace OpKey::Ble {
+namespace opkey::ble {
 
 
-template<auto MetaTypeEnum>
-struct MetaType { };
 
+struct UuidTag { };
 
 template<uint32_t A, uint16_t B, uint16_t C, uint16_t D, uint64_t E>
-struct Uuid128 : private MetaType<MetaTypes::Uuid> {
+struct Uuid128 : private UuidTag {
 	static_assert(E <= 0xffffffffffff, "Invalid service uuid128: Template argument 'E' is out of range");
 
 	inline constexpr static const std::array<uint8_t, 16> Bytes =
@@ -47,7 +46,7 @@ struct Uuid128 : private MetaType<MetaTypes::Uuid> {
 };
 
 template<uint16_t A>
-struct Uuid16 {
+struct Uuid16 : private UuidTag {
 	inline constexpr static const std::array<uint8_t, 2> Bytes =
 		{ static_cast<uint8_t>(A >> 0)
 		, static_cast<uint8_t>(A >> 8)
@@ -65,12 +64,42 @@ struct BluetoothBaseUuid
 	using From16Bit = Uuid128<A, 0x0000, 0x1000, 0x8000, 0x00805f9b34fb>;
 };
 
+struct UuidAuto : private UuidTag { };
 
-struct UuidAuto { };
 
+template<auto Value>
+struct FixedValue {
+};
 
-template<typename Uuid, typename... Options>
+template<auto* VariablePtr>
+struct BindVariable {
+};
+
+template<typename Options...>
 struct Characteristic {
+	using UuidType = detail::GetDerivedType<UuidTag, UuidAuto, Options...>;
+
+	struct Properties {
+		constexpr const bool Broadcast       = detail::HasType<PropBroadcast     , Options...>;
+		constexpr const bool Read            = detail::HasType<PropRead          , Options...>;
+		constexpr const bool WriteNoRsp      = detail::HasType<PropWriteNoRsp    , Options...>;
+		constexpr const bool Write           = detail::HasType<PropWrite         , Options...>;
+		constexpr const bool Notify          = detail::HasType<PropNotify        , Options...>;
+		constexpr const bool Indicate        = detail::HasType<PropIndicate      , Options...>;
+		constexpr const bool AuthSignWrite   = detail::HasType<PropAuthSignWrite , Options...>;
+		constexpr const bool Extended        = detail::HasType<PropExtended      , Options...>;
+
+		constexpr const uint8_t Value = 0
+			| (Broadcast     ? BLE_GATT_CHR_PROP_BROADCAST        : 0)
+			| (Read          ? BLE_GATT_CHR_PROP_READ             : 0)
+			| (WriteNoRsp    ? BLE_GATT_CHR_PROP_WRITE_NO_RSP     : 0)
+			| (Write         ? BLE_GATT_CHR_PROP_WRITE            : 0)
+			| (Notify        ? BLE_GATT_CHR_PROP_NOTIFY           : 0)
+			| (Indicate      ? BLE_GATT_CHR_PROP_INDICATE         : 0)
+			| (AuthSignWrite ? BLE_GATT_CHR_PROP_AUTH_SIGN_WRITE  : 0)
+			| (Extended      ? BLE_GATT_CHR_PROP_EXTENDED         : 0)
+			;
+	};
 };
 
 template<typename Uuid, typename... Characteristics>
@@ -84,42 +113,6 @@ struct GattServer {
 };
 
 
-using MidiService = Service
-	< Uuid128<0x2134543B, 0x1234, 0x1234, 0x1234, 0x1234567890ab>
-	, Characteristic<UuidAuto, >
-	>;
-
-
-static ... OnGattCharacteristicAccessDispatcher() {
-}
-
-
-class Characteristic {
-	virtual void onAccess() {};
-
-private:
-	uuid;
-	flags;
-};
-
-class Service {
-	Service& AddCharacteristic() {
-	}
-
-private:
-	type;
-	uuid;
-	std::vector<Characteristic> characteristics{};
-};
-
-class GattServer {
-	Service& AddService() {
-	}
-
-private:
-	std::vector<Service> services{};
-};
-
 
 static_assert(ESP_OK == 0, "This module relies on the value of ESP_OK to be 0");
 
@@ -129,7 +122,7 @@ static bool bleReady = false;
 
 
 static int BleGapEvent(ble_gap_event* event, void* arg);
-static uint8_t own_addr_type;
+static uint8_t OwnAddressType;
 
 extern "C" {
 	void ble_store_config_init();
@@ -317,7 +310,6 @@ static void BleGattInit() {
 	esp::check(ble_gatts_add_svcs(gatt_svr_svcs), "ble_gatts_add_svcs()");
 }
 
-
 static void BlePrintConnDesc(ble_gap_conn_desc& desc) {
 	esp::logi("handle={:d} our_ota_addr_type={:d} our_ota_addr={}"
 			, desc.conn_handle, desc.our_ota_addr.type
@@ -341,20 +333,16 @@ static void BlePrintConnDesc(ble_gap_conn_desc& desc) {
 }
 
 static void BleEnableAdvertise() {
-	ble_gap_adv_params adv_params{};
-	ble_hs_adv_fields fields{};
 	// Set the advertisement data included in our advertisements:
 	//    o Flags (indicates advertisement type and other general info).
 	//    o Advertising tx power.
 	//    o Device name.
 	//    o 16-bit service UUIDs (alert notifications).
-
 	// Advertise two flags:
 	//    o Discoverability in forthcoming advertisement (general)
 	//    o BLE-only (BR/EDR unsupported).
-	fields.flags = BLE_HS_ADV_F_DISC_GEN |
-		BLE_HS_ADV_F_BREDR_UNSUP;
-
+	ble_hs_adv_fields fields{};
+	fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
 	// Indicate that the TX power level field should be included; have the
 	// stack fill this value automatically.  This is done by assigning the
 	// special value BLE_HS_ADV_TX_PWR_LVL_AUTO.
@@ -378,11 +366,12 @@ static void BleEnableAdvertise() {
 	}
 
 	// Begin advertising.
-	memset(&adv_params, 0, sizeof adv_params);
-	adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
-	adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
-	auto rc = ble_gap_adv_start(own_addr_type, nullptr, BLE_HS_FOREVER,
-			&adv_params, BleGapEvent, nullptr);
+	ble_gap_adv_params advertisingParams{};
+	advertisingParams.conn_mode = BLE_GAP_CONN_MODE_UND;
+	advertisingParams.disc_mode = BLE_GAP_DISC_MODE_GEN;
+
+	auto rc = ble_gap_adv_start(OwnAddressType, nullptr, BLE_HS_FOREVER,
+			&advertisingParams, BleGapEvent, nullptr);
 	if (rc != 0) {
 		esp::loge("error enabling advertisement; rc={:d}\n", rc);
 		return;
@@ -407,6 +396,7 @@ static void BleEnableAdvertise() {
 static int BleGapEvent(ble_gap_event* event, void* arg) {
 	ble_gap_conn_desc desc;
 	int rc;
+	// TODO clean variables to local
 
 	switch (event->type) {
 		case BLE_GAP_EVENT_CONNECT:
@@ -440,6 +430,7 @@ static int BleGapEvent(ble_gap_event* event, void* arg) {
 					event->conn_update.status);
 			rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
 			assert(rc == 0);
+			// TODO clean asserts
 			BlePrintConnDesc(desc);
 			return 0;
 
@@ -479,8 +470,9 @@ static int BleGapEvent(ble_gap_event* event, void* arg) {
 
 		case BLE_GAP_EVENT_REPEAT_PAIRING:
 			// We already have a bond with the peer, but it is attempting to
-			// establish a new secure link.  This app sacrifices security for
+			// establish a new secure link. This app sacrifices security for
 			// convenience: just throw away the old bond and accept the new link.
+			// TODO WHO THOUGHT THIS WOULD BE A GOOD IDEA FOR AN NIBLE-EXAMPLE?!
 
 			// Delete the old bond. */
 			rc = ble_gap_conn_find(event->repeat_pairing.conn_handle, &desc);
@@ -549,7 +541,7 @@ static void BleOnSync() {
 	assert(ble_hs_util_ensure_addr(0) == 0);
 
 	// Figure out address to use while advertising (no privacy for now)
-	if (auto rc = ble_hs_id_infer_auto(0, &own_addr_type); rc != 0) {
+	if (auto rc = ble_hs_id_infer_auto(0, &OwnAddressType); rc != 0) {
 		esp::loge("error determining address type; rc={:d}\n", rc);
 		return;
 	}
@@ -557,18 +549,17 @@ static void BleOnSync() {
 	bleReady = true;
 
 	// Printing ADDR
-	uint8_t addr_val[6] = {0};
-	int rc = ble_hs_id_copy_addr(own_addr_type, addr_val, nullptr);
+	std::array<uint8_t, 6> addrVal{};
+	ble_hs_id_copy_addr(OwnAddressType, addrVal.data(), nullptr);
+	esp::logi("Device Address: {}\n", AddrToString(addrVal.data()));
 
-	esp::logi("Device Address: {}\n", AddrToString(addr_val));
-
-	// Begin advertising.
+	// Begin advertising
 	BleEnableAdvertise();
 }
 
 
 static void NimbleHostTask(void* param) {
-	esp::logi("BLE Host Task Started");
+	esp::logi("NimbleHostTask started");
 
 	// This function will return only when nimble_port_stop() is executed
 	nimble_port_run();
@@ -576,6 +567,7 @@ static void NimbleHostTask(void* param) {
 }
 
 
+template<typename GattServerType>
 static void Init(const char* name) {
 	if (bleInitialized) {
 		throw std::runtime_error("BLE already initialized");
@@ -606,4 +598,4 @@ static void Init(const char* name) {
 }
 
 
-} // namespace OpKey::Ble
+} // namespace opkey::ble

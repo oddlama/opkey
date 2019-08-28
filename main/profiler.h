@@ -11,7 +11,7 @@
 #include <freertos/task.h>
 
 
-namespace OpKey {
+namespace opkey {
 
 
 #ifndef NDEBUG
@@ -180,4 +180,4 @@ struct Profiler {
 #endif //NDEBUG
 
 
-} // namespace OpKey
+} // namespace opkey

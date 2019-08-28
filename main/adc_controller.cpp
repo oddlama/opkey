@@ -5,7 +5,7 @@
 #include "exception.h"
 
 
-namespace OpKey {
+namespace opkey {
 
 
 AdcController::AdcController() {
@@ -123,4 +123,4 @@ void AdcController::Read(SensorData& data, uint32_t samples) {
 }
 
 
-} // namespace OpKey
+} // namespace opkey

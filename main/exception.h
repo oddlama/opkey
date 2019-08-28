@@ -4,7 +4,7 @@
 #include <string>
 
 
-namespace OpKey {
+namespace opkey {
 
 
 class OpKeyException
@@ -17,4 +17,4 @@ public:
 };
 
 
-} // namespace OpKey
+} // namespace opkey

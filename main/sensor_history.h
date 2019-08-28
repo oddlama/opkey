@@ -12,7 +12,7 @@
 #include <array>
 
 
-namespace OpKey {
+namespace opkey {
 
 
 /**
@@ -141,4 +141,4 @@ private:
 };
 
 
-} // namespace OpKey
+} // namespace opkey

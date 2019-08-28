@@ -6,7 +6,7 @@
 #include <freertos/task.h>
 
 
-namespace OpKey {
+namespace opkey {
 
 
 #ifndef NDEBUG
@@ -137,4 +137,4 @@ void Profiler::LeaveSection(size_t section, size_t savedSection) noexcept {
 #endif // NDEBUG
 
 
-} // namespace OpKey
+} // namespace opkey

@@ -2,7 +2,7 @@
 #include "fmt.h"
 
 
-namespace OpKey {
+namespace opkey {
 
 
 SpiHost::SpiHost(std::string name, HostDevice hostDevice, gpio_num_t pinSclk, gpio_num_t pinMosi, gpio_num_t pinMiso, DmaChannel dmaChannel, int maxTransferSize)
@@ -95,4 +95,4 @@ SpiDevice SpiHost::AddDevice(std::string devName, gpio_num_t pinCs, int clockSpe
 }
 
 
-} // namespace OpKey
+} // namespace opkey

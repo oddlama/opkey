@@ -2,7 +2,7 @@
 #include "application.h"
 
 
-namespace OpKey {
+namespace opkey {
 
 
 SensorManager::SensorManager(Application& application)
@@ -32,4 +32,4 @@ void SensorManager::OnTick() {
 }
 
 
-} // namespace OpKey
+} // namespace opkey

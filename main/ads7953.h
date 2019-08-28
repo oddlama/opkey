@@ -5,7 +5,7 @@
 #include <array>
 
 
-namespace OpKey::Ads7953 {
+namespace opkey::ads7953 {
 
 
 inline constexpr static const uint16_t MaxValue = 0x1000;
@@ -183,4 +183,4 @@ inline void Transfer(SpiDevice& device, Result& rxBuf, Command& txBuf, ProgramMo
 }
 
 
-} // namespace OpKey::Ads7953
+} // namespace opkey::ads7953

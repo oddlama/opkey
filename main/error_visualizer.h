@@ -5,7 +5,7 @@
 #include "rmt_led_strip.h"
 
 
-namespace OpKey {
+namespace opkey {
 
 
 class ErrorVisualizer {
@@ -27,4 +27,4 @@ private:
 };
 
 
-} // namespace OpKey
+} // namespace opkey

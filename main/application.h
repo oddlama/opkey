@@ -14,7 +14,7 @@
 #include <memory>
 
 
-namespace OpKey {
+namespace opkey {
 
 
 class Application {
@@ -57,4 +57,4 @@ private:
 };
 
 
-} // namespace OpKey
+} // namespace opkey

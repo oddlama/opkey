@@ -3,7 +3,7 @@
 #include "fmt.h"
 
 
-namespace OpKey {
+namespace opkey {
 
 
 SpiDevice::AcquireGuard::AcquireGuard(SpiDevice& spiDevice)
@@ -46,4 +46,4 @@ SpiDevice& SpiDevice::operator=(SpiDevice&& other) noexcept {
 }
 
 
-} // namespace OpKey
+} // namespace opkey

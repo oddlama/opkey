@@ -2,7 +2,7 @@
 #include "application.h"
 
 
-namespace OpKey {
+namespace opkey {
 
 
 Statistics::Statistics(Application& application)
@@ -15,4 +15,4 @@ void Statistics::OnTick() {
 }
 
 
-} // namespace OpKey
+} // namespace opkey

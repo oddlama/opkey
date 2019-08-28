@@ -1,9 +1,9 @@
 #pragma once
 
 
-namespace OpKey {
+namespace opkey {
 
 
 
 
-} // namespace OpKey
+} // namespace opkey

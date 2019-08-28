@@ -12,7 +12,7 @@
 #include <cstdint>
 
 
-namespace OpKey {
+namespace opkey {
 
 
 struct RmtTimings {
@@ -209,4 +209,4 @@ private:
 };
 
 
-} // namespace OpKey
+} // namespace opkey

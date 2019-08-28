@@ -4,7 +4,7 @@
 #include "sensor_manager.h"
 
 
-namespace OpKey {
+namespace opkey {
 
 
 Visualizer::Visualizer(Application& application)
@@ -122,4 +122,4 @@ void Visualizer::OnSensorStateChange(const SensorManager& sensorManager, Sensor 
 }
 
 
-} // namespace OpKey
+} // namespace opkey

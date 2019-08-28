@@ -5,7 +5,7 @@
 #include <array>
 
 
-namespace OpKey {
+namespace opkey {
 
 
 template<typename T>
@@ -81,4 +81,4 @@ struct SensorDataCollection {
 };
 
 
-} // namespace OpKey
+} // namespace opkey

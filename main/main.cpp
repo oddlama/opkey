@@ -9,7 +9,7 @@ extern "C" {
 }
 
 void app_main() {
-	OpKey::Application::StartTask();
+	opkey::Application::StartTask();
 
 	// Delete this initial task
 	vTaskDelete(nullptr);

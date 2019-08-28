@@ -1,7 +1,7 @@
 #include <atomic>
 
 
-namespace OpKey {
+namespace opkey {
 
 
 class Spinlock {
@@ -21,4 +21,4 @@ private:
 };
 
 
-} // namespace OpKey
+} // namespace opkey

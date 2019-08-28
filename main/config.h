@@ -8,7 +8,7 @@
 #include <array>
 
 
-namespace OpKey::Config {
+namespace opkey::config {
 
 
 struct SpiConfig {
@@ -93,4 +93,4 @@ inline constexpr size_t GetSensorSwizzle(size_t keyIndex) {
 //}
 
 
-} // namespace OpKey::Config
+} // namespace opkey::config

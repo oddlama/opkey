@@ -1,7 +1,7 @@
 #pragma once
 
 
-namespace OpKey {
+namespace opkey {
 
 
 class Sensor {
@@ -41,4 +41,4 @@ private:
 };
 
 
-} // namespace OpKey
+} // namespace opkey

@@ -8,7 +8,7 @@
 #include "ads7953.h"
 
 
-namespace OpKey {
+namespace opkey {
 
 
 class AdcController {
@@ -61,4 +61,4 @@ private:
 };
 
 
-} // namespace OpKey
+} // namespace opkey

@@ -5,14 +5,37 @@
 #include "sensor_manager.h"
 
 
-namespace OpKey {
+namespace opkey {
+
+
+using MidiService = Service
+	< Uuid128<0x03b80e5a, 0xede8, 0x0b33, 0x0751, 0xce34ec4c700>
+	, Characteristic
+		< Uuid128<0x7772e5db, 0x3868, 0x4112, 0xa1a9, 0xf2669d106bf3>
+		, CharacteristicBindVariable<&midiPacket>
+		, CharacteristicNotify
+		//, CharacteristicIndicate
+		//, CharacteristicNotifyOnSubscription
+		//, CharacteristicIndicateOnSubscription
+		//, CharacteristicNoWriteAccess
+		//, CharacteristicNoReadAccess
+		, CharacteristicWriteWithoutResponse
+		>
+	>;
+
+using OpKeyGattServer = GattServer<MidiService>;
+
+static std::array<uint8_t, 16> midiPacket{};
 
 
 BleInterface::BleInterface(Application& application)
 	: onTickConnection(application.GetOnTickSink().connect<&BleInterface::OnTick>(*this))
 	, onSensorStateChangeConnection(application.GetOnSensorStateChangeSink().connect<&BleInterface::OnSensorStateChange>(*this))
 {
-	Ble::Init("OpKey");
+	OpKeyGattServer gattServer{};
+	GattServer server{};
+	server.
+	Ble::Init<OpKeyGattServer>("OpKey");
 }
 
 void BleInterface::OnTick() {
@@ -33,4 +56,4 @@ void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Senso
 }
 
 
-} // namespace OpKey
+} // namespace opkey

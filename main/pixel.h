@@ -3,7 +3,7 @@
 #include "color.h"
 
 
-namespace OpKey {
+namespace opkey {
 
 
 class PixelRgbw {
@@ -23,4 +23,4 @@ public:
 };
 
 
-} // namespace OpKey
+} // namespace opkey

@@ -4,7 +4,7 @@
 #include <nvs_flash.h>
 
 
-namespace OpKey::Nvs {
+namespace opkey::nvs {
 
 
 static void Init() {
@@ -16,4 +16,4 @@ static void Init() {
 }
 
 
-} // namespace OpKey::Nvs
+} // namespace opkey::nvs

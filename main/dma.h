@@ -10,7 +10,7 @@
 #include <cstdlib>
 
 
-namespace OpKey {
+namespace opkey {
 
 
 enum class DmaChannel {
@@ -52,4 +52,4 @@ unique_ptr_dma<T> make_unique_dma(Args&&... args) {
 }
 
 
-} // namespace OpKey
+} // namespace opkey
