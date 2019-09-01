@@ -58,8 +58,6 @@ void Application::StartTask() {
 
 
 void Application::operator()() {
-	opkey::nvs::Init();
-
 	auto& profiler = Profiler::GetInstance();
 
 	profiler.PrintSummary();

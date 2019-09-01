@@ -78,12 +78,13 @@ public:
 			throw std::runtime_error("Cannot create multiple instances of ble::Instance.");
 		}
 
+		instance = this;
 		esp::check(esp_nimble_hci_and_controller_init(), "esp_nimble_hci_and_controller_init()");
 		nimble_port_init();
 
 		// Initialize the NimBLE host configuration.
-		ble_hs_cfg.reset_cb = [&](int reason) { OnReset(reason); };
-		ble_hs_cfg.sync_cb = [&] { OnSync(); };
+		ble_hs_cfg.reset_cb = StaticOnReset;
+		ble_hs_cfg.sync_cb = StaticOnSync;
 		//ble_hs_cfg.gatts_register_cb = BleGattRegister;
 		ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
 
@@ -97,8 +98,8 @@ public:
 		ble_svc_gap_init();
 		ble_svc_gatt_init();
 
-		esp::check(ble_gatts_count_cfg(ServerType::nimbleGattServiceDefinitions), "ble_gatts_count_cfg()");
-		esp::check(ble_gatts_add_svcs(ServerType::nimbleGattServiceDefinitions), "ble_gatts_add_svcs()");
+		esp::check(ble_gatts_count_cfg(ServerType::nimbleGattServiceDefinitions.data()), "ble_gatts_count_cfg()");
+		esp::check(ble_gatts_add_svcs(ServerType::nimbleGattServiceDefinitions.data()), "ble_gatts_add_svcs()");
 		esp::check(ble_svc_gap_device_name_set(name), "ble_svc_gap_device_name_set()");
 
 		ble_store_config_init();
@@ -138,7 +139,7 @@ private:
 		fields.name_len = strlen(name);
 		fields.name_is_complete = 1;
 
-		fields.uuids16 = &Uuid16<0x1811>::nimbleUuid;
+		fields.uuids16 = const_cast<ble_uuid16_t*>(&Uuid16<0x1811>::nimbleUuid);
 		fields.num_uuids16 = 1;
 		fields.uuids16_is_complete = 1;
 
@@ -153,7 +154,7 @@ private:
 		advertisingParams.disc_mode = BLE_GAP_DISC_MODE_GEN;
 
 		auto rc = ble_gap_adv_start(ownAddressType, nullptr, BLE_HS_FOREVER,
-				&advertisingParams, [&](ble_gap_event* event, void*) { OnGapEvent(event); }, nullptr);
+				&advertisingParams, StaticOnGapEvent, this);
 		if (rc != 0) {
 			esp::loge("error enabling advertisement; rc={:d}\n", rc);
 			return;
@@ -337,6 +338,21 @@ private:
 		}
 
 		return 0;
+	}
+
+private:
+	static inline Instance* instance = nullptr;
+
+	static void StaticOnReset(int reason) {
+		instance->OnReset(reason);
+	}
+
+	static void StaticOnSync() {
+		instance->OnSync();
+	}
+
+	static int StaticOnGapEvent(ble_gap_event* event, void* paramThis) {
+		return static_cast<Instance*>(paramThis)->OnGapEvent(event);
 	}
 
 private:

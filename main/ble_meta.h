@@ -24,10 +24,12 @@ struct _FirstNonVoid<ElseType> {
 
 template<typename ElseType, typename T, typename... Ts>
 struct _FirstNonVoid<ElseType, T, Ts...> {
-    using Type = std::conditional_t
-        < std::is_same_v<T, void>
-        , typename _FirstNonVoid<ElseType, Ts...>::Type
-        , T>;
+    using Type = T;
+};
+
+template<typename ElseType, typename... Ts>
+struct _FirstNonVoid<ElseType, void, Ts...> {
+    using Type = typename _FirstNonVoid<ElseType, Ts...>::Type;
 };
 
 template<typename ElseType, typename... Ts>

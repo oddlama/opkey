@@ -8,6 +8,15 @@
 namespace opkey::ble {
 
 
+struct ServiceMixinTag { };
+
+namespace service_options {
+
+struct Secondary : private ServiceMixinTag { };
+
+} // namespace service_options
+
+
 template<typename Tuple>
 struct ExpandCharacteristicDefinitions;
 
@@ -22,10 +31,11 @@ struct ExpandCharacteristicDefinitions<std::tuple<Ts...>> {
 
 struct ServiceTag { };
 
-template<typename Uuid, typename... Options>
+template<typename... Options>
 struct Service : private ServiceTag {
 	static_assert(meta::CountDerivedType<UuidTag, Options...> <= 1, "Service must not include more than one Uuid");
 	static_assert(
+			meta::CountDerivedType<ServiceMixinTag, Options...> +
 			meta::CountDerivedType<UuidTag, Options...> +
 			meta::CountDerivedType<CharacteristicTag, Options...> ==
 				sizeof...(Options)
@@ -35,15 +45,17 @@ struct Service : private ServiceTag {
 	using UuidType = meta::GetDerivedType<UuidTag, UuidAuto, Options...>;
 	using CharacteristicTuple = meta::ExtractDerivedTypes<CharacteristicTag, Options...>;
 	static inline constexpr const size_t characteristicCount = std::tuple_size_v<CharacteristicTuple>;
-	static inline constexpr const std::array<ble_gatt_svc_def, characteristicCount + 1> nimbleGattCharacteristicDefinitions =
+	static inline constexpr const std::array<ble_gatt_chr_def, characteristicCount + 1> nimbleGattCharacteristicDefinitions =
 		ExpandCharacteristicDefinitions<CharacteristicTuple>::value;
+
+	static inline constexpr const bool secondary = meta::HasType<service_options::Secondary, Options...>;
 
 	constexpr static ble_gatt_svc_def NimbleServiceDefinition() noexcept {
 		return
 			{ // .type
-				BLE_GATT_SVC_TYPE_PRIMARY
+				secondary ? BLE_GATT_SVC_TYPE_SECONDARY : BLE_GATT_SVC_TYPE_PRIMARY
 			, // .uuid
-				&UuidType::nimbleUuid
+				reinterpret_cast<const ble_uuid_t*>(&UuidType::nimbleUuid)
 			, // .includes
 				nullptr
 			, // .characteristics

@@ -4,7 +4,7 @@
 namespace opkey::nvs {
 
 
-static void Init();
+void Init();
 
 
 } // namespace opkey::nvs

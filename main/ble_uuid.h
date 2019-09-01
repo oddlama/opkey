@@ -35,7 +35,9 @@ private:
 	static constexpr const ble_uuid128_t ToNimbleUuid() noexcept {
 		ble_uuid128_t ret{};
 		ret.u.type = BLE_UUID_TYPE_128;
-		std::copy(bytes.begin(), bytes.end(), ret.value);
+		for (int i = 0; i < 16; ++i) {
+			ret.value[i] = bytes[i];
+		}
 		return ret;
 	};
 
@@ -77,7 +79,16 @@ struct BluetoothBaseUuid
 	using From16Bit = Uuid128<A, 0x0000, 0x1000, 0x8000, 0x00805f9b34fb>;
 };
 
-struct UuidAuto : private UuidTag { };
+struct UuidAuto : private UuidTag {
+private:
+	// TODO implement auto uuids
+	struct AutoUuidIsNotYetImplemented {
+		void operator&() { }
+	};
+
+public:
+	inline static constexpr const AutoUuidIsNotYetImplemented nimbleUuid{};
+};
 
 
 } // namespace opkey::ble

@@ -36,7 +36,7 @@ namespace characteristic_options {
 	struct FixedValue : private FixedValueTag { };
 
 	template<auto* VariablePtr>
-	struct BindVariable : private BindVariableTag { };
+	struct BindVariable : private BindVariableTag, private ReadHandlerTag, private WriteHandlerTag { };
 
 	template<typename T>
 	struct AccessCallback : private AccessCallbackTag { };
@@ -106,7 +106,7 @@ struct Characteristic : private CharacteristicTag {
 	constexpr static ble_gatt_chr_def NimbleCharacteristicDefinition() noexcept {
 		return
 			{ // .uuid
-				&UuidType::nimbleUuid
+				reinterpret_cast<const ble_uuid_t*>(&UuidType::nimbleUuid)
 			, // .access_cb
 				&NimbleOnAccess
 			, // .arg
@@ -124,6 +124,7 @@ struct Characteristic : private CharacteristicTag {
 
 private:
 	static int NimbleOnAccess(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context, void* arg) {
+		esp::logi("Accessed '{}'", __PRETTY_FUNCTION__);
 		return 0;
 	}
 };
