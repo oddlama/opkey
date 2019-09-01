@@ -98,6 +98,21 @@ public:
 		ble_svc_gap_init();
 		ble_svc_gatt_init();
 
+		for (const auto& s : ServerType::nimbleGattServiceDefinitions) {
+			if (s.type == 0) { break; }
+			esp::logi("service:");
+			esp::logi("- type: {}", s.type);
+			esp::logi("- uuid: {} {:02x}{:02x}", (void*)s.uuid, ((char*)s.uuid)[1], ((char*)s.uuid)[2]);
+			esp::logi("- characteristics: {}", (void*)s.characteristics);
+			auto* c = s.characteristics;
+			while (c && c->uuid) {
+				esp::logi("    characteristic:");
+				esp::logi("    - uuid: {}", (void*)c->uuid, ((char*)c->uuid)[1], ((char*)c->uuid)[2]);
+				esp::logi("    - access_cb: {}", (void*)c->access_cb);
+				esp::logi("    - flags: {}", c->flags);
+				++c;
+			}
+		}
 		esp::check(ble_gatts_count_cfg(ServerType::nimbleGattServiceDefinitions.data()), "ble_gatts_count_cfg()");
 		esp::check(ble_gatts_add_svcs(ServerType::nimbleGattServiceDefinitions.data()), "ble_gatts_add_svcs()");
 		esp::check(ble_svc_gap_device_name_set(name), "ble_svc_gap_device_name_set()");

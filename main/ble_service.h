@@ -44,8 +44,7 @@ struct Service : private ServiceTag {
 
 	using UuidType = meta::GetDerivedType<UuidTag, UuidAuto, Options...>;
 	using CharacteristicTuple = meta::ExtractDerivedTypes<CharacteristicTag, Options...>;
-	static inline constexpr const size_t characteristicCount = std::tuple_size_v<CharacteristicTuple>;
-	static inline constexpr const std::array<ble_gatt_chr_def, characteristicCount + 1> nimbleGattCharacteristicDefinitions =
+	static inline constexpr const auto nimbleGattCharacteristicDefinitions =
 		ExpandCharacteristicDefinitions<CharacteristicTuple>::value;
 
 	static inline constexpr const bool secondary = meta::HasType<service_options::Secondary, Options...>;

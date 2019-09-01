@@ -81,8 +81,9 @@ template<typename WantBaseType, typename Tuple, typename T, typename... Ts>
 struct _ExtractDerivedTypes<WantBaseType, Tuple, T, Ts...> {
     using Type = std::conditional_t
         < std::is_base_of_v<WantBaseType, T>
-        , AppendTypeToTuple<Tuple, T>
-        , Tuple>;
+        , typename _ExtractDerivedTypes<WantBaseType, AppendTypeToTuple<Tuple, T>, Ts...>::Type
+        , typename _ExtractDerivedTypes<WantBaseType, Tuple, Ts...>::Type
+		>;
 };
 
 template<typename WantBaseType, typename... Ts>

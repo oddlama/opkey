@@ -48,8 +48,7 @@ struct Server : private ServerTag {
 			);
 
 	using ServiceTuple = meta::ExtractDerivedTypes<ServiceTag, Options...>;
-	static inline constexpr const size_t serviceCount = std::tuple_size_v<ServiceTuple>;
-	static inline constexpr const std::array<ble_gatt_svc_def, serviceCount + 1> nimbleGattServiceDefinitions =
+	static inline constexpr const auto nimbleGattServiceDefinitions =
 		ExpandServiceDefinitions<ServiceTuple>::value;
 };
 
