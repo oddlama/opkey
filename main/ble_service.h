@@ -8,6 +8,18 @@
 namespace opkey::ble {
 
 
+template<typename Tuple>
+struct ExpandCharacteristicDefinitions;
+
+template<typename... Ts>
+struct ExpandCharacteristicDefinitions<std::tuple<Ts...>> {
+	static inline constexpr const std::array<ble_gatt_chr_def, sizeof...(Ts) + 1> value =
+		{ Ts::NimbleCharacteristicDefinition()...
+		, { nullptr, nullptr, nullptr, nullptr, 0, 0, nullptr }
+		};
+};
+
+
 struct ServiceTag { };
 
 template<typename Uuid, typename... Options>
@@ -21,13 +33,10 @@ struct Service : private ServiceTag {
 			);
 
 	using UuidType = meta::GetDerivedType<UuidTag, UuidAuto, Options...>;
-	using CharacteristicTuple = ExtractDerivedTypes<CharacteristicTag, Options...>;
+	using CharacteristicTuple = meta::ExtractDerivedTypes<CharacteristicTag, Options...>;
 	static inline constexpr const size_t characteristicCount = std::tuple_size_v<CharacteristicTuple>;
-
-	static inline constexpr const std::array<ble_gatt_chr_def, characteristicCount + 1> nimbleGattCharacteristicDefinitions =
-		{ (..., Characteristic::NimbleCharacteristicDefinition()),
-		, { nullptr, nullptr, nullptr, nullptr, 0, 0, nullptr }
-		};
+	static inline constexpr const std::array<ble_gatt_svc_def, characteristicCount + 1> nimbleGattCharacteristicDefinitions =
+		ExpandCharacteristicDefinitions<CharacteristicTuple>::value;
 
 	constexpr static ble_gatt_svc_def NimbleServiceDefinition() noexcept {
 		return

@@ -8,10 +8,10 @@ namespace opkey::ble::meta {
 
 
 template<typename WantType, typename T>
-using GetType = std::conditional_t<std::is_same_v<WantType, T>, T, void>;
+using TypeOrVoid = std::conditional_t<std::is_same_v<WantType, T>, T, void>;
 
 template<typename WantBaseType, typename T>
-using GetDerivedType = std::conditional_t<std::is_base_of_v<WantBaseType, T>, T, void>;
+using DerivedTypeOrVoid = std::conditional_t<std::is_base_of_v<WantBaseType, T>, T, void>;
 
 
 template<typename ElseType, typename... Ts>
@@ -48,14 +48,14 @@ template<typename WantBaseType, typename... Ts>
 constexpr const uint8_t CountDerivedType = (... + (std::is_base_of_v<WantBaseType, Ts> ? 1 : 0));
 
 
-template<typename WantBaseType, typename ElseType, typename... Ts>
-using GetType = FirstNonVoid<ElseType, GetType<WantType, Ts>...>;
+template<typename WantType, typename ElseType, typename... Ts>
+using GetType = FirstNonVoid<ElseType, TypeOrVoid<WantType, Ts>...>;
 
 template<typename WantBaseType, typename ElseType, typename... Ts>
-using GetDerivedType = FirstNonVoid<ElseType, GetDerived<WantBaseType, Ts>...>;
+using GetDerivedType = FirstNonVoid<ElseType, DerivedTypeOrVoid<WantBaseType, Ts>...>;
 
 
-template<typename... Ts, typename T>
+template<typename Tuple, typename T>
 struct _AppendTypeToTuple;
 
 template<typename... Ts, typename T>
@@ -63,8 +63,8 @@ struct _AppendTypeToTuple<std::tuple<Ts...>, T> {
 	using Type = std::tuple<Ts..., T>;
 };
 
-template<typename... Ts, typename T>
-using AppendTypeToTuple = typename _AppendTypeToTuple<Ts..., T>::Type;
+template<typename Tuple, typename T>
+using AppendTypeToTuple = typename _AppendTypeToTuple<Tuple, T>::Type;
 
 
 template<typename WantBaseType, typename Tuple, typename... Ts>
@@ -77,7 +77,7 @@ struct _ExtractDerivedTypes<WantBaseType, Tuple> {
 
 template<typename WantBaseType, typename Tuple, typename T, typename... Ts>
 struct _ExtractDerivedTypes<WantBaseType, Tuple, T, Ts...> {
-    using Type = conditional_t
+    using Type = std::conditional_t
         < std::is_base_of_v<WantBaseType, T>
         , AppendTypeToTuple<Tuple, T>
         , Tuple>;

@@ -23,7 +23,7 @@ public:
 	}
 
 private:
-	RmtLedStrip<PixelRgbw, RmtTimingsSk6812> ledStrip{GPIO_NUM_32, 144};
+	RmtLedStrip<PixelRgbw, RmtTimingsSk6812, 88 * 2> ledStrip{GPIO_NUM_32};
 };
 
 

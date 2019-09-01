@@ -9,14 +9,31 @@ namespace opkey::ble {
 
 
 struct ServerMixinTag { };
-struct ServerConnectCallbackTag : private ServerMixinTag { };
-struct ServerDisconnectCallbackTag : private ServerMixinTag { };
+
+namespace server_options {
+
+struct ConnectCallbackTag : private ServerMixinTag { };
+struct DisconnectCallbackTag : private ServerMixinTag { };
 
 template<typename F>
-struct ServerConnectCallback : private ServerConnectCallbackTag { };
+struct ConnectCallback : private ConnectCallbackTag { };
 
 template<typename F>
-struct ServerDisconnectCallback : private ServerDisconnectCallbackTag { };
+struct DisconnectCallback : private DisconnectCallbackTag { };
+
+} // namespace server_options
+
+
+template<typename Tuple>
+struct ExpandServiceDefinitions;
+
+template<typename... Ts>
+struct ExpandServiceDefinitions<std::tuple<Ts...>> {
+	static inline constexpr const std::array<ble_gatt_svc_def, sizeof...(Ts) + 1> value =
+		{ Ts::NimbleServiceDefinition()...
+		, { 0, nullptr, nullptr, nullptr }
+		};
+};
 
 
 struct ServerTag { };
@@ -24,19 +41,16 @@ struct ServerTag { };
 template<typename... Options>
 struct Server : private ServerTag {
 	static_assert(
-			meta::CountDerivedType<ServiceMixinTag, Options...> +
+			meta::CountDerivedType<ServerMixinTag, Options...> +
 			meta::CountDerivedType<ServiceTag, Options...> ==
 				sizeof...(Options)
 			, "Server definition contains an invalid type"
 			);
 
-	using ServiceTuple = ExtractDerivedTypes<ServiceTag, Options...>;
+	using ServiceTuple = meta::ExtractDerivedTypes<ServiceTag, Options...>;
 	static inline constexpr const size_t serviceCount = std::tuple_size_v<ServiceTuple>;
-
 	static inline constexpr const std::array<ble_gatt_svc_def, serviceCount + 1> nimbleGattServiceDefinitions =
-		{ (..., Service::NimbleServiceDefinition())
-		, { 0, nullptr, nullptr, nullptr }
-		};
+		ExpandServiceDefinitions<ServiceTuple>::value;
 };
 
 

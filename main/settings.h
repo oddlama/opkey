@@ -6,7 +6,7 @@ namespace opkey {
 
 class Settings {
 private:
-	size_t multisamples = Config::DefaultMultisamples;
+	size_t multisamples = config::DefaultMultisamples;
 };
 
 

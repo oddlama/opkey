@@ -25,7 +25,7 @@ Visualizer::Visualizer(Application& application)
 		}
 	};
 
-	xTaskCreatePinnedToCore(DispatchMain, "OpKeyVisualizer", 8192, this, tskIDLE_PRIORITY + 1, &taskHandle, OpKey::Config::VisualizerCore);
+	xTaskCreatePinnedToCore(DispatchMain, "OpKeyVisualizer", 8192, this, tskIDLE_PRIORITY + 1, &taskHandle, opkey::config::VisualizerCore);
 }
 
 Visualizer::~Visualizer() noexcept {

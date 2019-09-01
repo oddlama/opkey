@@ -55,7 +55,7 @@ public:
 
 		// Swizzle the raw data to match the sensor order
 		for (size_t i = 0; i < newData.size(); ++i) {
-			t_0.raw[i] = newData[Config::GetSensorSwizzle(i)];
+			t_0.raw[i] = newData[config::GetSensorSwizzle(i)];
 		}
 
 		// Inverse delta time between now and t_1 in [1/s]

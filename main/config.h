@@ -83,7 +83,7 @@ inline constexpr size_t GetSensorSwizzle(size_t keyIndex) {
 
 //Map(adcs, hspi, hspi.pinCs[0], {
 //	}
-// Maps each adc's channel to a key, or 255 for unused.[adcIndex * Ads7953::NumChannels + channelIndex] -> keyIndex [0-87]
+// Maps each adc's channel to a key, or 255 for unused.[adcIndex * ads7953::NumChannels + channelIndex] -> keyIndex [0-87]
 //inline constexpr const std::array<uint8_t, > ChannelFunctions = 6;
 //inline constexpr const std::array<uint8_t, > MidiAdcChannelToKey = 6;
 //

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <host/ble_uuid.h>
+
 
 namespace opkey::ble {
 
@@ -29,12 +31,6 @@ struct Uuid128 : private UuidTag {
 		, static_cast<uint8_t>(A >> 24)
 		};
 
-	inline static constexpr const ble_uuid128_t nimbleUuid = ToNimbleUuid();
-
-	static constexpr uint16_t As16Bit() noexcept {
-		return static_cast<uint16_t>(A);
-	};
-
 private:
 	static constexpr const ble_uuid128_t ToNimbleUuid() noexcept {
 		ble_uuid128_t ret{};
@@ -42,6 +38,13 @@ private:
 		std::copy(bytes.begin(), bytes.end(), ret.value);
 		return ret;
 	};
+
+public:
+	inline static constexpr const ble_uuid128_t nimbleUuid = ToNimbleUuid();
+
+	static constexpr uint16_t As16Bit() noexcept {
+		return static_cast<uint16_t>(A);
+	}
 };
 
 template<uint16_t A>
@@ -51,12 +54,6 @@ struct Uuid16 : private UuidTag {
 		, static_cast<uint8_t>(A >> 8)
 		};
 
-	inline static constexpr const ble_uuid16_t nimbleUuid = ToNimbleUuid();
-
-	static constexpr uint16_t As16Bit() noexcept {
-		return A;
-	};
-
 private:
 	static constexpr const ble_uuid16_t ToNimbleUuid() noexcept {
 		ble_uuid16_t ret{};
@@ -64,6 +61,13 @@ private:
 		std::copy(bytes.begin(), bytes.end(), reinterpret_cast<const uint8_t*>(bytes.data()));
 		return ret;
 	};
+public:
+
+	inline static constexpr const ble_uuid16_t nimbleUuid = ToNimbleUuid();
+
+	static constexpr uint16_t As16Bit() noexcept {
+		return A;
+	}
 };
 
 struct BluetoothBaseUuid
