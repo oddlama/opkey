@@ -28,4 +28,4 @@ namespace esp {
 			throw std::runtime_error("{} returned {}"_format(msg, esp_err_to_name(error)));
 		}
 	}
-}
+} // namespace esp

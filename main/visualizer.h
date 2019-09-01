@@ -10,8 +10,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include <mutex>
-
 
 namespace opkey {
 

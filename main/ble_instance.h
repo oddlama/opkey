@@ -97,8 +97,8 @@ public:
 		ble_svc_gap_init();
 		ble_svc_gatt_init();
 
-		esp::check(ble_gatts_count_cfg(gatt_svr_svcs), "ble_gatts_count_cfg()");
-		esp::check(ble_gatts_add_svcs(gatt_svr_svcs), "ble_gatts_add_svcs()");
+		esp::check(ble_gatts_count_cfg(ServerType::nimbleGattServiceDefinitions), "ble_gatts_count_cfg()");
+		esp::check(ble_gatts_add_svcs(ServerType::nimbleGattServiceDefinitions), "ble_gatts_add_svcs()");
 		esp::check(ble_svc_gap_device_name_set(name), "ble_svc_gap_device_name_set()");
 
 		ble_store_config_init();
@@ -110,6 +110,12 @@ public:
 		bleInitialized = false;
 	}
 
+	Instance(const Instance&) = delete;
+	Instance(Instance&&) = delete;
+	Instance& operator=(const Instance&) = delete;
+	Instance& operator=(Instance&&) = delete;
+
+private:
 	void EnableAdvertising() {
 		// Set the advertisement data included in our advertisements:
 		//   - Flags (indicates advertisement type and other general info).
@@ -194,7 +200,7 @@ public:
 	 *                  of the return code is specific to the
 	 *                  particular GAP event being signalled.
 	 */
-	int OnGapEvent(ble_gap_event* event, void* param) {
+	int OnGapEvent(ble_gap_event* event) {
 		ble_gap_conn_desc desc;
 		int rc;
 		// TODO clean variables to local

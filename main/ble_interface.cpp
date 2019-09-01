@@ -1,8 +1,8 @@
-#include "ble_interface.h"
-
 #include "fmt.h"
 #include "application.h"
 #include "sensor_manager.h"
+
+#include "ble_interface.h"
 
 
 namespace opkey {

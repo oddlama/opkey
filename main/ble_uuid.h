@@ -58,11 +58,11 @@ private:
 	static constexpr const ble_uuid16_t ToNimbleUuid() noexcept {
 		ble_uuid16_t ret{};
 		ret.u.type = BLE_UUID_TYPE_16;
-		std::copy(bytes.begin(), bytes.end(), reinterpret_cast<const uint8_t*>(bytes.data()));
+		ret.value = A;
 		return ret;
 	};
-public:
 
+public:
 	inline static constexpr const ble_uuid16_t nimbleUuid = ToNimbleUuid();
 
 	static constexpr uint16_t As16Bit() noexcept {
