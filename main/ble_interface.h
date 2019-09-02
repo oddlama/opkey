@@ -11,7 +11,7 @@ namespace opkey {
 
 namespace blecfg {
 
-inline std::array<uint8_t, 16> midiPacket{};
+inline std::array<uint8_t, 32> midiPacket{};
 
 using namespace ble;
 namespace chr = ble::characteristic_options;
@@ -26,7 +26,6 @@ using MidiService = Service
 		, chr::BindVariable<&midiPacket>
 		, chr::Notify
 		, chr::WriteNoResponse
-		, chr::NoWriteAccess
 		>
 	>;
 

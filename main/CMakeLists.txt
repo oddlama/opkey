@@ -17,6 +17,6 @@ set(COMPONENT_ADD_INCLUDEDIRS ".")
 
 register_component()
 
-target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_17)
+target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_20)
 target_compile_options(${COMPONENT_LIB} PRIVATE ${PEDANTIC_COMPILE_FLAGS})
 target_compile_options(${COMPONENT_LIB} PRIVATE -fdiagnostics-color=always)

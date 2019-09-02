@@ -70,7 +70,8 @@ namespace characteristic_options {
 	{
 		template<typename InstanceType, typename Characteristic>
 		static int OnSubscribe(uint16_t connHandle, uint8_t reason,
-			bool prevNotify, bool curNotify, bool prevIndicate, bool curIndicate) {
+			bool prevNotify, bool curNotify, bool prevIndicate, bool curIndicate)
+		{
 			InstanceType::Indicate(connHandle, Characteristic::valHandle);
 			return 0;
 		}
@@ -82,7 +83,8 @@ namespace characteristic_options {
 	{
 		template<typename InstanceType, typename Characteristic>
 		static int OnSubscribe(uint16_t connHandle, uint8_t reason,
-			bool prevNotify, bool curNotify, bool prevIndicate, bool curIndicate) {
+			bool prevNotify, bool curNotify, bool prevIndicate, bool curIndicate)
+		{
 			InstanceType::Notify(connHandle, Characteristic::valHandle);
 			return 0;
 		}
@@ -117,6 +119,8 @@ struct Characteristic : private CharacteristicTag {
 	static inline constexpr const bool writeNoResponse    = meta::HasType<characteristic_options::WriteNoResponse,    Options...>;
 	static inline constexpr const bool notify             = meta::HasType<characteristic_options::Notify,             Options...>;
 	static inline constexpr const bool indicate           = meta::HasType<characteristic_options::Indicate,           Options...>;
+
+	static_assert((not writeNoResponse) || (not noWriteAccess), "WriteNoResponse requires write access");
 
 	static inline constexpr const ble_gatt_chr_flags nimbleChrFlagsValue = 0
 		| (noReadAccess       ? 0                               : BLE_GATT_CHR_F_READ)
