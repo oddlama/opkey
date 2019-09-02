@@ -14,21 +14,36 @@ namespace blecfg {
 inline std::array<uint8_t, 16> midiPacket{};
 
 using namespace ble;
-namespace co = ble::characteristic_options;
+namespace chr = ble::characteristic_options;
+namespace svc = ble::service_options;
+namespace svr = ble::server_options;
 
 using MidiService = Service
 	< Uuid128<0x03b80e5a, 0xede8, 0x0b33, 0x0751, 0xce34ec4c700>
+	, svc::AdvertiseUuid
 	, Characteristic
 		< Uuid128<0x7772e5db, 0x3868, 0x4112, 0xa1a9, 0xf2669d106bf3>
-		, co::BindVariable<&midiPacket>
-		, co::Notify
-		, co::WriteNoResponse
-		//, co::NoWriteAccess
-		//, co::NoReadAccess
+		, chr::BindVariable<&midiPacket>
+		, chr::Notify
+		, chr::WriteNoResponse
+		, chr::NoWriteAccess
+		//, chr::NoReadAccess
 		>
 	>;
 
-using Server = ble::Server<MidiService>;
+inline void OnConnect(const ble_gap_conn_desc& desc) {
+	esp::logi("HANDLE connect");
+}
+
+inline void OnDisconnect(int reason, const ble_gap_conn_desc& desc) {
+	esp::logi("HANDLE disconnect");
+}
+
+using Server = ble::Server
+	< MidiService
+	, svr::ConnectCallback<OnConnect>
+	, svr::DisconnectCallback<OnDisconnect>
+	>;
 
 } // namespace blecfg
 

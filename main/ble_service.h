@@ -13,6 +13,7 @@ struct ServiceMixinTag { };
 namespace service_options {
 
 struct Secondary : private ServiceMixinTag { };
+struct AdvertiseUuid : private ServiceMixinTag { };
 
 } // namespace service_options
 
@@ -48,6 +49,7 @@ struct Service : private ServiceTag {
 		ExpandCharacteristicDefinitions<CharacteristicTuple>::value;
 
 	static inline constexpr const bool secondary = meta::HasType<service_options::Secondary, Options...>;
+	static inline constexpr const bool advertiseUuid = meta::HasType<service_options::AdvertiseUuid, Options...>;
 
 	constexpr static ble_gatt_svc_def NimbleServiceDefinition() noexcept {
 		return

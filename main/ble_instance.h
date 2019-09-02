@@ -26,11 +26,11 @@ extern "C" {
 }
 
 
-static std::string AddrToString(uint8_t val[6]) {
+inline static std::string AddrToString(uint8_t val[6]) {
 	return fmt::format("{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", val[0], val[1], val[2], val[3], val[4], val[5]);
 }
 
-static void BlePrintConnDesc(ble_gap_conn_desc& desc) {
+inline static void BlePrintConnDesc(ble_gap_conn_desc& desc) {
 	esp::logi("handle={:d} our_ota_addr_type={:d} our_ota_addr={}"
 			, desc.conn_handle, desc.our_ota_addr.type
 			, AddrToString(desc.our_ota_addr.val));
@@ -56,10 +56,10 @@ static void BlePrintConnDesc(ble_gap_conn_desc& desc) {
 static_assert(ESP_OK == 0, "This module relies on the value of ESP_OK to be 0");
 
 
-static inline size_t bleInitialized = false;
+inline static size_t bleInitialized = false;
 
 
-static void NimbleHostTask(void* param) {
+inline static void NimbleHostTask(void* param) {
 	esp::logi("NimbleHostTask started");
 
 	// This function will return only when nimble_port_stop() is executed
@@ -118,21 +118,17 @@ public:
 
 private:
 	void EnableAdvertising() {
-		// Set the advertisement data included in our advertisements:
-		//   - Flags (indicates advertisement type and other general info).
-		//   - Advertising tx power.
-		//   - Device name.
-		//   - 16-bit service UUIDs (alert notifications).
 		// Advertise two flags:
 		//   - Discoverability in forthcoming advertisement (general)
 		//   - BLE-only (BR/EDR unsupported).
 		ble_hs_adv_fields fields{};
 		fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+
 		// Indicate that the TX power level field should be included; have the
 		// stack fill this value automatically.  This is done by assigning the
 		// special value BLE_HS_ADV_TX_PWR_LVL_AUTO.
-		fields.tx_pwr_lvl_is_present = 1;
 		fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
+		fields.tx_pwr_lvl_is_present = 1;
 
 		// TODO const cast?!
 		fields.name = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(name));
@@ -143,22 +139,19 @@ private:
 		fields.num_uuids16 = 1;
 		fields.uuids16_is_complete = 1;
 
-		if (auto rc = ble_gap_adv_set_fields(&fields); rc != 0) {
-			esp::loge("error setting advertisement data; rc={:d}\n", rc);
-			return;
-		}
+		fields.uuids128 = const_cast<ble_uuid128_t*>(&Uuid128<0x03b80e5a, 0xede8, 0x0b33, 0x0751, 0xce34ec4c700>::nimbleUuid);
+		fields.num_uuids128 = 1;
+		fields.uuids128_is_complete = 1;
+
+		esp::check(ble_gap_adv_set_fields(&fields), "ble_gap_adv_set_fields()");
 
 		// Begin advertising.
 		ble_gap_adv_params advertisingParams{};
 		advertisingParams.conn_mode = BLE_GAP_CONN_MODE_UND;
 		advertisingParams.disc_mode = BLE_GAP_DISC_MODE_GEN;
 
-		auto rc = ble_gap_adv_start(ownAddressType, nullptr, BLE_HS_FOREVER,
-				&advertisingParams, StaticOnGapEvent, this);
-		if (rc != 0) {
-			esp::loge("error enabling advertisement; rc={:d}\n", rc);
-			return;
-		}
+		esp::check(ble_gap_adv_start(ownAddressType, nullptr, BLE_HS_FOREVER,
+				&advertisingParams, StaticOnGapEvent, this), "ble_gap_adv_start()");
 	}
 
 	void OnReset(int reason) {
@@ -202,23 +195,19 @@ private:
 	 *                  particular GAP event being signalled.
 	 */
 	int OnGapEvent(ble_gap_event* event) {
-		ble_gap_conn_desc desc;
-		int rc;
-		// TODO clean variables to local
-
 		switch (event->type) {
 			case BLE_GAP_EVENT_CONNECT:
 				// A new connection was established or a connection attempt failed.
 				esp::logi("connection {:s}; status={:d} ",
 						event->connect.status == 0 ? "established" : "failed",
 						event->connect.status);
-				if (event->connect.status == 0) {
-					rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
-					assert(rc == 0);
-					BlePrintConnDesc(desc);
-				}
 
-				if (event->connect.status != 0) {
+				if (event->connect.status == 0) {
+					ble_gap_conn_desc desc;
+					esp::check(ble_gap_conn_find(event->connect.conn_handle, &desc), "ble_gap_conn_find()");
+					BlePrintConnDesc(desc);
+					ServerType::OnConnect(desc);
+				} else {
 					// Connection failed; resume advertising.
 					EnableAdvertising();
 				}
@@ -227,39 +216,46 @@ private:
 			case BLE_GAP_EVENT_DISCONNECT:
 				esp::logi("disconnect; reason={:d} ", event->disconnect.reason);
 				BlePrintConnDesc(event->disconnect.conn);
+				ServerType::OnDisconnect(event->disconnect.reason, event->disconnect.conn);
 
 				// Connection terminated; resume advertising.
 				EnableAdvertising();
 				return 0;
 
-			case BLE_GAP_EVENT_CONN_UPDATE:
+			case BLE_GAP_EVENT_CONN_UPDATE: {
 				// The central has updated the connection parameters.
-				esp::logi("connection updated; status={:d} ",
-						event->conn_update.status);
-				rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
-				assert(rc == 0);
-				// TODO clean asserts
+				esp::logi("connection updated; status={:d} ", event->conn_update.status);
+				ble_gap_conn_desc desc;
+				esp::check(ble_gap_conn_find(event->connect.conn_handle, &desc), "ble_gap_conn_find()");
 				BlePrintConnDesc(desc);
 				return 0;
+			}
 
 			case BLE_GAP_EVENT_ADV_COMPLETE:
-				esp::logi("advertise complete; reason={:d}",
-						event->adv_complete.reason);
+				esp::logi("advertise complete; reason={:d}", event->adv_complete.reason);
 				EnableAdvertising();
 				return 0;
 
-			case BLE_GAP_EVENT_ENC_CHANGE:
+			case BLE_GAP_EVENT_ENC_CHANGE: {
 				// Encryption has been enabled or disabled for this connection.
-				esp::logi("encryption change event; status={:d} ",
-						event->enc_change.status);
-				rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
-				assert(rc == 0);
+				esp::logi("encryption change event; status={:d} ", event->enc_change.status);
+				ble_gap_conn_desc desc;
+				esp::check(ble_gap_conn_find(event->connect.conn_handle, &desc), "ble_gap_conn_find()");
 				BlePrintConnDesc(desc);
 				return 0;
+			}
 
 			case BLE_GAP_EVENT_SUBSCRIBE:
 				esp::logi("subscribe event; conn_handle={:d} attr_handle={:d} "
 						"reason={:d} prevn={} curn={} previ={} curi={}\n",
+						event->subscribe.conn_handle,
+						event->subscribe.attr_handle,
+						event->subscribe.reason,
+						static_cast<bool>(event->subscribe.prev_notify),
+						static_cast<bool>(event->subscribe.cur_notify),
+						static_cast<bool>(event->subscribe.prev_indicate),
+						static_cast<bool>(event->subscribe.cur_indicate));
+				ServerType::OnSubscribe(
 						event->subscribe.conn_handle,
 						event->subscribe.attr_handle,
 						event->subscribe.reason,
@@ -276,31 +272,32 @@ private:
 						event->mtu.value);
 				return 0;
 
-			case BLE_GAP_EVENT_REPEAT_PAIRING:
+			case BLE_GAP_EVENT_REPEAT_PAIRING: {
 				// We already have a bond with the peer, but it is attempting to
 				// establish a new secure link. This app sacrifices security for
 				// convenience: just throw away the old bond and accept the new link.
-				// TODO WHO THOUGHT THIS WOULD BE A GOOD IDEA FOR AN NIBLE-EXAMPLE?!
+				// TODO WHO THOUGHT THIS (no security) WOULD BE A GOOD IDEA FOR A NIBLE-EXAMPLE?!
 
 				// Delete the old bond. */
-				rc = ble_gap_conn_find(event->repeat_pairing.conn_handle, &desc);
-				assert(rc == 0);
+				ble_gap_conn_desc desc;
+				esp::check(ble_gap_conn_find(event->repeat_pairing.conn_handle, &desc), "ble_gap_conn_find()");
 				ble_store_util_delete_peer(&desc.peer_id_addr);
 
 				// Return BLE_GAP_REPEAT_PAIRING_RETRY to indicate that the host should
 				// continue with the pairing operation.
 				return BLE_GAP_REPEAT_PAIRING_RETRY;
+			}
 
-			case BLE_GAP_EVENT_PASSKEY_ACTION:
+			case BLE_GAP_EVENT_PASSKEY_ACTION: {
 				esp::logi("PASSKEY_ACTION_EVENT started");
-				ble_sm_io pkey = {0};
-				int key = 0;
+				ble_sm_io pkey{};
+				//int key = 0;
 
 				if (event->passkey.params.action == BLE_SM_IOACT_DISP) {
 					pkey.action = event->passkey.params.action;
 					pkey.passkey = 123456; // This is the passkey to be entered on peer
 					esp::logi("Enter passkey {:d} on the peer side", pkey.passkey);
-					rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
+					int rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
 					esp::logi("ble_sm_inject_io result: {:d}\n", rc);
 				} else if (event->passkey.params.action == BLE_SM_IOACT_NUMCMP) {
 					esp::logi("Passkey on device's display: {:d}", event->passkey.params.numcmp);
@@ -312,7 +309,7 @@ private:
 					//	pkey.numcmp_accept = 0;
 					//	esp::loge("Timeout! Rejecting the key");
 					//}
-					rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
+					int rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
 					esp::logi("ble_sm_inject_io result: {:d}\n", rc);
 				} else if (event->passkey.params.action == BLE_SM_IOACT_OOB) {
 					static uint8_t tem_oob[16] = {0};
@@ -320,7 +317,7 @@ private:
 					for (int i = 0; i < 16; i++) {
 						pkey.oob[i] = tem_oob[i];
 					}
-					rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
+					int rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
 					esp::logi("ble_sm_inject_io result: {:d}\n", rc);
 				} else if (event->passkey.params.action == BLE_SM_IOACT_INPUT) {
 					esp::logi("Enter the passkey through console in this format-> key 123456");
@@ -331,9 +328,13 @@ private:
 					//	pkey.passkey = 0;
 					//	esp::loge("Timeout! Passing 0 as the key");
 					//}
-					rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
+					int rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
 					esp::logi("ble_sm_inject_io result: {:d}\n", rc);
 				}
+				return 0;
+			}
+
+			default:
 				return 0;
 		}
 

@@ -25,15 +25,15 @@ namespace characteristic_options {
 	struct Notify             : private CharacteristicMixinTag { };
 	struct Indicate           : private CharacteristicMixinTag { };
 
-	struct FixedValueTag      : private CharacteristicMixinTag { };
-	struct BindVariableTag    : private CharacteristicMixinTag { };
-
-	struct ReadHandlerTag         : private CharacteristicMixinTag { };
-	struct WriteHandlerTag        : private CharacteristicMixinTag { };
-	struct SubscriptionHandlerTag : private CharacteristicMixinTag { };
+	struct ReadHandlerTag         { };
+	struct WriteHandlerTag        { };
+	struct SubscriptionHandlerTag { };
 
 	template<auto V>
-	struct FixedValue : private FixedValueTag {
+	struct FixedValue
+		: private CharacteristicMixinTag
+		, private ReadHandlerTag
+	{
 		static inline constexpr const auto value = V;
 
 		static int OnRead(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context) {
@@ -43,7 +43,11 @@ namespace characteristic_options {
 	};
 
 	template<auto* VariablePtr>
-	struct BindVariable : private BindVariableTag, private ReadHandlerTag, private WriteHandlerTag {
+	struct BindVariable
+		: private CharacteristicMixinTag
+		, private ReadHandlerTag
+		, private WriteHandlerTag
+	{
 		static int OnRead(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context) {
 			int err = os_mbuf_append(context->om, VariablePtr, sizeof(*VariablePtr));
 			return err == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
@@ -59,6 +63,28 @@ namespace characteristic_options {
 			return err == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 		}
 	};
+
+	//struct IndicateOnSubscribe
+	//	: private CharacteristicMixinTag
+	//	, private SubscriptionHandlerTag
+	//{
+	//	template<typename BleInstance>
+	//	static int OnSubscribe(BleInstance& instance, uint16_t connHandle, uint16_t attrHandle) {
+	//		instance.Indicate(attrHandle);
+	//		return 0;
+	//	}
+	//};
+
+	//struct NotifyOnSubscribe
+	//	: private CharacteristicMixinTag
+	//	, private SubscriptionHandlerTag
+	//{
+	//	template<typename BleInstance>
+	//	static int OnSubscribe(BleInstance& instance, uint16_t connHandle, uint16_t attrHandle) {
+	//		instance.Notify(attrHandle);
+	//		return 0;
+	//	}
+	//};
 } // namespace characteristic_options
 
 
@@ -107,6 +133,9 @@ struct Characteristic : private CharacteristicTag {
 	static inline constexpr const size_t readHandlerCount = meta::CountDerivedType<characteristic_options::ReadHandlerTag, Options...>;
 	static inline constexpr const size_t writeHandlerCount = meta::CountDerivedType<characteristic_options::WriteHandlerTag, Options...>;
 	static inline constexpr const size_t subscriptionHandlerCount = meta::CountDerivedType<characteristic_options::SubscriptionHandlerTag, Options...>;
+	static_assert(readHandlerCount <= 1, "Multiple read handlers are not supported");
+	static_assert(writeHandlerCount <= 1, "Multiple write handlers are not supported");
+	static_assert(subscriptionHandlerCount <= 1, "Multiple subscription handlers are not supported");
 
 	static inline constexpr const bool hasReadHandler = readHandlerCount > 0;
 	static inline constexpr const bool hasWriteHandler = writeHandlerCount > 0;
