@@ -64,27 +64,29 @@ namespace characteristic_options {
 		}
 	};
 
-	//struct IndicateOnSubscribe
-	//	: private CharacteristicMixinTag
-	//	, private SubscriptionHandlerTag
-	//{
-	//	template<typename BleInstance>
-	//	static int OnSubscribe(BleInstance& instance, uint16_t connHandle, uint16_t attrHandle) {
-	//		instance.Indicate(attrHandle);
-	//		return 0;
-	//	}
-	//};
+	struct IndicateOnSubscribe
+		: private CharacteristicMixinTag
+		, private SubscriptionHandlerTag
+	{
+		template<typename InstanceType, typename Characteristic>
+		static int OnSubscribe(uint16_t connHandle, uint8_t reason,
+			bool prevNotify, bool curNotify, bool prevIndicate, bool curIndicate) {
+			InstanceType::Indicate(connHandle, Characteristic::valHandle);
+			return 0;
+		}
+	};
 
-	//struct NotifyOnSubscribe
-	//	: private CharacteristicMixinTag
-	//	, private SubscriptionHandlerTag
-	//{
-	//	template<typename BleInstance>
-	//	static int OnSubscribe(BleInstance& instance, uint16_t connHandle, uint16_t attrHandle) {
-	//		instance.Notify(attrHandle);
-	//		return 0;
-	//	}
-	//};
+	struct NotifyOnSubscribe
+		: private CharacteristicMixinTag
+		, private SubscriptionHandlerTag
+	{
+		template<typename InstanceType, typename Characteristic>
+		static int OnSubscribe(uint16_t connHandle, uint8_t reason,
+			bool prevNotify, bool curNotify, bool prevIndicate, bool curIndicate) {
+			InstanceType::Notify(connHandle, Characteristic::valHandle);
+			return 0;
+		}
+	};
 } // namespace characteristic_options
 
 
@@ -151,6 +153,8 @@ struct Characteristic : private CharacteristicTag {
 	// If a subscription handler exists, there must be read access.
 	static_assert((not hasSubscriptionHandler) || (not noReadAccess), "Characteristic has subscription handler, but no read access");
 
+	static inline uint16_t valHandle = 0;
+
 	constexpr static ble_gatt_chr_def NimbleCharacteristicDefinition() noexcept {
 		return
 			{ // .uuid
@@ -166,8 +170,30 @@ struct Characteristic : private CharacteristicTag {
 			, // .min_key_size
 				0
 			, // .val_handle
-				nullptr
+				&valHandle
 			};
+	}
+
+	static bool CompareHandle(uint16_t handle) noexcept {
+		return valHandle == handle;
+	}
+
+	template<typename InstanceType>
+	static void OnSubscribe(uint16_t connHandle, uint8_t reason,
+			bool prevNotify, bool curNotify, bool prevIndicate, bool curIndicate)
+	{
+		if constexpr (hasSubscriptionHandler) {
+			SubscriptionHandler::template OnSubscribe<InstanceType, Characteristic>(connHandle,
+					reason, prevNotify, curNotify, prevIndicate, curIndicate);
+		}
+
+		// Suppress usage warnings due to constexpr branches
+		(void)connHandle;
+		(void)reason;
+		(void)prevNotify;
+		(void)curNotify;
+		(void)prevIndicate;
+		(void)curIndicate;
 	}
 
 private:
@@ -192,6 +218,10 @@ private:
 			case BLE_GATT_ACCESS_OP_WRITE_DSC:
 				return BLE_ATT_ERR_UNLIKELY;
 		}
+
+		// Suppress usage warnings due to constexpr branches
+		(void)connHandle;
+		(void)attrHandle;
 
 		return BLE_ATT_ERR_UNLIKELY;
 	}

@@ -85,7 +85,7 @@ public:
 		// Initialize the NimBLE host configuration.
 		ble_hs_cfg.reset_cb = StaticOnReset;
 		ble_hs_cfg.sync_cb = StaticOnSync;
-		//ble_hs_cfg.gatts_register_cb = BleGattRegister;
+		ble_hs_cfg.gatts_register_cb = StaticOnRegister;
 		ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
 
 		ble_hs_cfg.sm_io_cap = BLE_SM_IO_CAP_NO_IO;
@@ -116,6 +116,28 @@ public:
 	Instance& operator=(const Instance&) = delete;
 	Instance& operator=(Instance&&) = delete;
 
+	template<typename Uuid>
+	static int Notify(uint16_t connHandle) {
+		using Chr = typename ServerType::template GetTypeByUuid<Uuid>;
+		static_assert(std::is_base_of_v<CharacteristicTag, Chr>, "Could not find a characteristic with the given uuid");
+		return ble_gattc_notify(connHandle, Chr::valHandle);
+	}
+
+	static int Notify(uint16_t connHandle, uint16_t chrValHandle) {
+		return ble_gattc_notify(connHandle, chrValHandle);
+	}
+
+	template<typename Uuid>
+	static int Indicate(uint16_t connHandle) {
+		using Chr = typename ServerType::template GetTypeByUuid<Uuid>;
+		static_assert(std::is_base_of_v<CharacteristicTag, Chr>, "Could not find a characteristic with the given uuid");
+		return ble_gattc_indicate(connHandle, Chr::valHandle);
+	}
+
+	static int Indicate(uint16_t connHandle, uint16_t chrValHandle) {
+		return ble_gattc_indicate(connHandle, chrValHandle);
+	}
+
 private:
 	void EnableAdvertising() {
 		// Advertise two flags:
@@ -139,9 +161,9 @@ private:
 		fields.num_uuids16 = 1;
 		fields.uuids16_is_complete = 1;
 
-		fields.uuids128 = const_cast<ble_uuid128_t*>(&Uuid128<0x03b80e5a, 0xede8, 0x0b33, 0x0751, 0xce34ec4c700>::nimbleUuid);
-		fields.num_uuids128 = 1;
-		fields.uuids128_is_complete = 1;
+		//fields.uuids128 = const_cast<ble_uuid128_t*>(&Uuid128<0x03b80e5a, 0xede8, 0x0b33, 0x0751, 0xce34ec4c700>::nimbleUuid);
+		//fields.num_uuids128 = 1;
+		//fields.uuids128_is_complete = 1;
 
 		esp::check(ble_gap_adv_set_fields(&fields), "ble_gap_adv_set_fields()");
 
@@ -255,7 +277,7 @@ private:
 						static_cast<bool>(event->subscribe.cur_notify),
 						static_cast<bool>(event->subscribe.prev_indicate),
 						static_cast<bool>(event->subscribe.cur_indicate));
-				ServerType::OnSubscribe(
+				ServerType::template OnSubscribe<Instance>(
 						event->subscribe.conn_handle,
 						event->subscribe.attr_handle,
 						event->subscribe.reason,
@@ -350,6 +372,30 @@ private:
 
 	static void StaticOnSync() {
 		instance->OnSync();
+	}
+
+	static void StaticOnRegister(ble_gatt_register_ctxt* context, void* arg) {
+		switch (context->op) {
+			case BLE_GATT_REGISTER_OP_SVC:
+				esp::logi("Registered service: uuid={}, handle={}",
+						ToString(context->svc.svc_def->uuid), context->svc.handle);
+				break;
+
+			case BLE_GATT_REGISTER_OP_CHR:
+				esp::logi("Registered characteristic: uuid={}, def_handle={}, val_handle={}",
+						ToString(context->chr.chr_def->uuid),
+						context->chr.def_handle,
+						context->chr.val_handle);
+				break;
+
+			case BLE_GATT_REGISTER_OP_DSC:
+				esp::logi("Registered descriptor: uuid={}, handle={}",
+						ToString(context->dsc.dsc_def->uuid), context->dsc.handle);
+				break;
+
+			default:
+				break;
+		}
 	}
 
 	static int StaticOnGapEvent(ble_gap_event* event, void* paramThis) {

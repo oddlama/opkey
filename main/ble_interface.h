@@ -31,18 +31,16 @@ using MidiService = Service
 		>
 	>;
 
-inline void OnConnect(const ble_gap_conn_desc& desc) {
-	esp::logi("HANDLE connect");
-}
-
-inline void OnDisconnect(int reason, const ble_gap_conn_desc& desc) {
-	esp::logi("HANDLE disconnect");
-}
+//inline void OnConnect(const ble_gap_conn_desc& desc) {
+//}
+//
+//inline void OnDisconnect(int reason, const ble_gap_conn_desc& desc) {
+//}
 
 using Server = ble::Server
 	< MidiService
-	, svr::ConnectCallback<OnConnect>
-	, svr::DisconnectCallback<OnDisconnect>
+	//, svr::ConnectCallback<OnConnect>
+	//, svr::DisconnectCallback<OnDisconnect>
 	>;
 
 } // namespace blecfg

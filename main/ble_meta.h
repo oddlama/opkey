@@ -57,6 +57,45 @@ template<typename WantBaseType, typename ElseType, typename... Ts>
 using GetDerivedType = FirstNonVoid<ElseType, DerivedTypeOrVoid<WantBaseType, Ts>...>;
 
 
+template<typename WantedMixinType, class T>
+struct _RecurseGetTypeByMixin {
+	using Type = void;
+};
+
+template<typename WantedMixinType, class T, typename... Ts>
+struct _GetTypeByMixin {
+	using Type = void;
+};
+
+
+template<typename WantedMixinType, template<typename...> class T, typename... Ts>
+struct _RecurseGetTypeByMixin<WantedMixinType, T<Ts...>> {
+	using Type = typename _GetTypeByMixin<WantedMixinType, T<Ts...>, Ts...>::Type;
+};
+
+template<typename WantedMixinType, template<typename...> class T, typename... Ts>
+struct _GetTypeByMixin<WantedMixinType, T<Ts...>, Ts...> {
+	using Type = std::conditional_t
+		< (... || std::is_same_v<WantedMixinType, Ts>)
+		, T<Ts...>
+		, FirstNonVoid<void, typename _RecurseGetTypeByMixin<WantedMixinType, Ts>::Type...>
+		>;
+};
+
+template<typename WantedMixinType, class T>
+struct _DispatchGetTypeByMixin {
+	static_assert(not std::is_same_v<T, T>, "To use GetTypeByMixin, the given type must have a template parameter pack");
+};
+
+template<typename WantedMixinType, template<typename...> class T, typename... Ts>
+struct _DispatchGetTypeByMixin<WantedMixinType, T<Ts...>> {
+	using Type = typename _GetTypeByMixin<WantedMixinType, T<Ts...>, Ts...>::Type;
+};
+
+template<typename WantedMixinType, typename ElseType, class T>
+using GetTypeByMixin = FirstNonVoid<ElseType, typename _DispatchGetTypeByMixin<WantedMixinType, T>::Type>;
+
+
 template<typename Tuple, typename T>
 struct _AppendTypeToTuple;
 

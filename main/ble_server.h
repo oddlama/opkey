@@ -80,6 +80,9 @@ struct Server : private ServerTag {
 	static inline constexpr const auto nimbleGattServiceDefinitions =
 		ExpandServiceDefinitions<ServiceTuple>::value;
 
+	template<typename Uuid, typename ElseType = void>
+	using GetTypeByUuid = meta::GetTypeByMixin<Uuid, ElseType, Server>;
+
 	// TODO get all uuids from services with AdvertiseUuid tag
 	// + all AdvertiseUuid<Uuid16> from here
 	//
@@ -88,18 +91,28 @@ struct Server : private ServerTag {
 	static void OnConnect(const ble_gap_conn_desc& desc) {
 		if constexpr (hasConnectHandler) {
 			ConnectHandler::OnConnect(desc);
+		} else {
+			(void)desc;
 		}
 	}
 
 	static void OnDisconnect(int reason, const ble_gap_conn_desc& desc) {
 		if constexpr (hasDisconnectHandler) {
 			DisconnectHandler::OnDisconnect(reason, desc);
+		} else {
+			(void)reason;
+			(void)desc;
 		}
 	}
 
+	template<typename InstanceType>
 	static void OnSubscribe(uint16_t connHandle, uint16_t attrHandle, uint8_t reason,
 			bool prevNotify, bool curNotify, bool prevIndicate, bool curIndicate)
-	{ }
+	{
+		//FindCharacteristic(attrHandle, []<typename C> {
+		//		C::OnSubscribe<InstanceType>(connHandle, reason, prevNotify, curNotify, prevIndicate, curIndicate);
+		//	});
+	}
 };
 
 

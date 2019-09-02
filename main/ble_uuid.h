@@ -1,9 +1,41 @@
 #pragma once
 
+#include "fmt.h"
 #include <host/ble_uuid.h>
 
 
 namespace opkey::ble {
+
+
+inline std::string ToString(const ble_uuid16_t& uuid) {
+	return fmt::format("{:04x}", uuid.value);
+}
+
+inline std::string ToString(const ble_uuid32_t& uuid) {
+	return fmt::format("{:08x}", uuid.value);
+}
+
+inline std::string ToString(const ble_uuid128_t& uuid) {
+	return fmt::format("{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}"
+		, uuid.value[15], uuid.value[14], uuid.value[13], uuid.value[12]
+		, uuid.value[11], uuid.value[10], uuid.value[ 9], uuid.value[ 8]
+		, uuid.value[ 7], uuid.value[ 6], uuid.value[ 5], uuid.value[ 4]
+		, uuid.value[ 3], uuid.value[ 2], uuid.value[ 1], uuid.value[ 0]
+		);
+}
+
+inline std::string ToString(const ble_uuid_t* uuid) {
+	if (not uuid) {
+		return "(null uuid)";
+	}
+
+	switch (uuid->type) {
+		case BLE_UUID_TYPE_16:  return ToString(*reinterpret_cast<const ble_uuid16_t*>(static_cast<const void*>(uuid)));
+		case BLE_UUID_TYPE_32:  return ToString(*reinterpret_cast<const ble_uuid32_t*>(static_cast<const void*>(uuid)));
+		case BLE_UUID_TYPE_128: return ToString(*reinterpret_cast<const ble_uuid128_t*>(static_cast<const void*>(uuid)));
+		default:                return "(invalid uuid type)";
+	}
+}
 
 
 struct UuidTag { };
@@ -32,7 +64,7 @@ struct Uuid128 : private UuidTag {
 		};
 
 private:
-	static constexpr const ble_uuid128_t ToNimbleUuid() noexcept {
+	inline static constexpr const ble_uuid128_t ToNimbleUuid() noexcept {
 		ble_uuid128_t ret{};
 		ret.u.type = BLE_UUID_TYPE_128;
 		for (int i = 0; i < 16; ++i) {
@@ -44,8 +76,12 @@ private:
 public:
 	inline static constexpr const ble_uuid128_t nimbleUuid = ToNimbleUuid();
 
-	static constexpr uint16_t As16Bit() noexcept {
+	inline static constexpr uint16_t As16Bit() noexcept {
 		return static_cast<uint16_t>(A);
+	}
+
+	inline static std::string ToString() {
+		return fmt::format("{:08x}-{:04x}-{:04x}-{:04x}-{:012x}", A, B, C, D, E);
 	}
 };
 
@@ -57,7 +93,7 @@ struct Uuid16 : private UuidTag {
 		};
 
 private:
-	static constexpr const ble_uuid16_t ToNimbleUuid() noexcept {
+	inline static constexpr const ble_uuid16_t ToNimbleUuid() noexcept {
 		ble_uuid16_t ret{};
 		ret.u.type = BLE_UUID_TYPE_16;
 		ret.value = A;
@@ -67,8 +103,12 @@ private:
 public:
 	inline static constexpr const ble_uuid16_t nimbleUuid = ToNimbleUuid();
 
-	static constexpr uint16_t As16Bit() noexcept {
+	inline static constexpr uint16_t As16Bit() noexcept {
 		return A;
+	}
+
+	inline static std::string ToString() {
+		return fmt::format("{:08x}", A);
 	}
 };
 
