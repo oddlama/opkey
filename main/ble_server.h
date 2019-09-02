@@ -109,9 +109,13 @@ struct Server : private ServerTag {
 	static void OnSubscribe(uint16_t connHandle, uint16_t attrHandle, uint8_t reason,
 			bool prevNotify, bool curNotify, bool prevIndicate, bool curIndicate)
 	{
-		//FindCharacteristic(attrHandle, []<typename C> {
-		//		C::OnSubscribe<InstanceType>(connHandle, reason, prevNotify, curNotify, prevIndicate, curIndicate);
-		//	});
+		meta::ForTupleTypes<ServiceTuple>::Apply([&]<typename Svc>(Svc*) {
+			meta::ForTupleTypes<typename Svc::CharacteristicTuple>::Apply([&]<typename Chr>(Chr*) {
+					if (attrHandle == Chr::valHandle) {
+						Chr::template OnSubscribe<InstanceType>(connHandle, reason, prevNotify, curNotify, prevIndicate, curIndicate);
+					}
+				});
+			});
 	}
 };
 

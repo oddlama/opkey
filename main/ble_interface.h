@@ -27,7 +27,6 @@ using MidiService = Service
 		, chr::Notify
 		, chr::WriteNoResponse
 		, chr::NoWriteAccess
-		//, chr::NoReadAccess
 		>
 	>;
 

@@ -129,4 +129,16 @@ template<typename WantBaseType, typename... Ts>
 using ExtractDerivedTypes = typename _ExtractDerivedTypes<WantBaseType, std::tuple<>, Ts...>::Type;
 
 
+template<typename Tuple>
+struct ForTupleTypes;
+
+template<typename... Ts>
+struct ForTupleTypes<std::tuple<Ts...>> {
+	template<typename F>
+	inline static void Apply(F&& f) {
+		(... || f(static_cast<Ts*>(nullptr)));
+	}
+};
+
+
 } // namespace opkey::ble::meta

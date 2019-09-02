@@ -174,10 +174,6 @@ struct Characteristic : private CharacteristicTag {
 			};
 	}
 
-	static bool CompareHandle(uint16_t handle) noexcept {
-		return valHandle == handle;
-	}
-
 	template<typename InstanceType>
 	static void OnSubscribe(uint16_t connHandle, uint8_t reason,
 			bool prevNotify, bool curNotify, bool prevIndicate, bool curIndicate)
