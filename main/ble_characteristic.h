@@ -4,6 +4,7 @@
 #include "ble_uuid.h"
 
 #include <host/ble_gatt.h>
+#include <os/os_mbuf.h>
 
 
 namespace opkey::ble {
@@ -26,20 +27,38 @@ namespace characteristic_options {
 
 	struct FixedValueTag      : private CharacteristicMixinTag { };
 	struct BindVariableTag    : private CharacteristicMixinTag { };
-	struct AccessCallbackTag  : private CharacteristicMixinTag { };
 
 	struct ReadHandlerTag         : private CharacteristicMixinTag { };
 	struct WriteHandlerTag        : private CharacteristicMixinTag { };
 	struct SubscriptionHandlerTag : private CharacteristicMixinTag { };
 
-	template<auto Value>
-	struct FixedValue : private FixedValueTag { };
+	template<auto V>
+	struct FixedValue : private FixedValueTag {
+		static inline constexpr const auto value = V;
+
+		static int OnRead(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context) {
+			int err = os_mbuf_append(context->om, &value, sizeof(value));
+			return err == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+		}
+	};
 
 	template<auto* VariablePtr>
-	struct BindVariable : private BindVariableTag, private ReadHandlerTag, private WriteHandlerTag { };
+	struct BindVariable : private BindVariableTag, private ReadHandlerTag, private WriteHandlerTag {
+		static int OnRead(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context) {
+			int err = os_mbuf_append(context->om, VariablePtr, sizeof(*VariablePtr));
+			return err == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+		}
 
-	template<typename T>
-	struct AccessCallback : private AccessCallbackTag { };
+		static int OnWrite(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context) {
+			if (OS_MBUF_PKTLEN(context->om) != sizeof(*VariablePtr)) {
+				return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+			}
+
+			uint16_t countCopied;
+			int err = ble_hs_mbuf_to_flat(context->om, VariablePtr, sizeof(*VariablePtr), &countCopied);
+			return err == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+		}
+	};
 } // namespace characteristic_options
 
 
@@ -124,8 +143,28 @@ struct Characteristic : private CharacteristicTag {
 
 private:
 	static int NimbleOnAccess(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context, void* arg) {
-		esp::logi("Accessed '{}'", __PRETTY_FUNCTION__);
-		return 0;
+		switch (context->op) {
+			case BLE_GATT_ACCESS_OP_READ_CHR:
+				if constexpr (hasReadHandler) {
+					return ReadHandler::OnRead(connHandle, attrHandle, context);
+				} else {
+					return BLE_ATT_ERR_UNLIKELY;
+				}
+
+			case BLE_GATT_ACCESS_OP_WRITE_CHR:
+				if constexpr (hasWriteHandler) {
+					return WriteHandler::OnWrite(connHandle, attrHandle, context);
+				} else {
+					return BLE_ATT_ERR_UNLIKELY;
+				}
+
+			default:
+			case BLE_GATT_ACCESS_OP_READ_DSC:
+			case BLE_GATT_ACCESS_OP_WRITE_DSC:
+				return BLE_ATT_ERR_UNLIKELY;
+		}
+
+		return BLE_ATT_ERR_UNLIKELY;
 	}
 };
 
