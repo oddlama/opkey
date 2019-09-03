@@ -25,7 +25,7 @@ Visualizer::Visualizer(Application& application)
 		}
 	};
 
-	//xTaskCreatePinnedToCore(DispatchMain, "OpKeyVisualizer", 8192, this, tskIDLE_PRIORITY + 1, &taskHandle, opkey::config::VisualizerCore);
+	xTaskCreatePinnedToCore(DispatchMain, "OpKeyVisualizer", 8192, this, tskIDLE_PRIORITY + 1, &taskHandle, opkey::config::VisualizerCore);
 }
 
 Visualizer::~Visualizer() noexcept {
@@ -34,17 +34,7 @@ Visualizer::~Visualizer() noexcept {
 
 
 void Visualizer::TaskMain() {
-	//static int r = 0;
 	while (true) {
-		//if (++r % 2 == 0) {
-		//	// Decay
-		//	for (size_t i = 0; i < ledStrip.Size(); ++i) {
-		//		if (ledStrip[i].r > 0) { ledStrip[i].r -= 1; needsUpdate = true; }
-		//		if (ledStrip[i].g > 0) { ledStrip[i].g -= 1; needsUpdate = true; }
-		//		if (ledStrip[i].b > 0) { ledStrip[i].b -= 1; needsUpdate = true; }
-		//		if (ledStrip[i].w > 0) { ledStrip[i].w -= 1; needsUpdate = true; }
-		//	}
-		//}
 		do {
 			//std::scoped_lock lock{spinlock};
 
@@ -75,13 +65,18 @@ void Visualizer::TaskMain() {
 				}
 			});
 
+			// Yield before and after updating to not starve the BLE task
+			taskYIELD();
 			ledStrip.Update();
+			taskYIELD();
+#ifndef NDEBUG
 			++debugLedFpsCount;
+#endif
 		} while (false);
 
-		// yeet!
+		taskYIELD();
+		// TODO wait only what is remaining X - now + begin to get X fps, with X being a config variable for vis fps
 		vTaskDelay(10 / portTICK_PERIOD_MS);
-		//taskYIELD();
 	}
 }
 

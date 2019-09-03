@@ -122,9 +122,11 @@ public:
 	void NotifyAll() {
 		using Chr = typename ServerType::template GetTypeByUuid<Uuid>;
 		static_assert(std::is_base_of_v<CharacteristicTag, Chr>, "Could not find a characteristic with the given uuid");
+		auto t = esp_timer_get_time();
 		for (const auto& connHandle : allConnections) {
 			ble_gattc_notify(connHandle, Chr::valHandle);
 		}
+		fmt::print("notify took {:8d}us\n", esp_timer_get_time() - t);
 	}
 
 	template<typename Uuid>

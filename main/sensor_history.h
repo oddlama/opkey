@@ -70,7 +70,7 @@ public:
 			t_0.kinematic.acceleration[i] = (t_0.kinematic.velocity[i] - t_1.kinematic.velocity[i]) * dt;
 
 			t_0.keyState[i] = t_1.keyState[i];
-			if (not t_1.keyState[i].pressed && t_0.kinematic.position[i] > 0.4 && t_0.kinematic.velocity[i] > 3.0) {
+			if ((not t_1.keyState[i].pressed && t_0.kinematic.position[i] > 0.4 && t_0.kinematic.velocity[i] > 2.0)) {
 				t_0.keyState[i].pressed = true;
 			} else if (t_1.keyState[i].pressed && t_0.kinematic.position[i] < 0.4) {
 				t_0.keyState[i].pressed = false;
