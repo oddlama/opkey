@@ -2,6 +2,7 @@
 
 #include "ble_meta.h"
 #include "ble_uuid.h"
+#include "ble_array.h"
 
 #include <host/ble_gatt.h>
 #include <os/os_mbuf.h>
@@ -38,6 +39,31 @@ namespace characteristic_options {
 
 		static int OnRead(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context) {
 			int err = os_mbuf_append(context->om, &value, sizeof(value));
+			return err == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+		}
+	};
+
+	template<auto* ArrayPtr>
+	struct BindArray
+		: private CharacteristicMixinTag
+		, private ReadHandlerTag
+		, private WriteHandlerTag
+	{
+		static_assert(std::is_base_of_v<ArrayTag, std::decay_t<std::remove_pointer_t<decltype(ArrayPtr)>>>, "BindArray can only be used in conjunction with a ble::Array variable");
+
+		static int OnRead(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context) {
+			int err = os_mbuf_append(context->om, ArrayPtr->data(), ArrayPtr->GetUsedSize());
+			return err == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+		}
+
+		static int OnWrite(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context) {
+			if (OS_MBUF_PKTLEN(context->om) > ArrayPtr->size()) {
+				return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+			}
+
+			uint16_t countCopied;
+			int err = ble_hs_mbuf_to_flat(context->om, ArrayPtr->data(), ArrayPtr->size(), &countCopied);
+			ArrayPtr->SetUsedSize(countCopied);
 			return err == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 		}
 	};

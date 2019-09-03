@@ -11,7 +11,7 @@ namespace opkey {
 
 namespace blecfg {
 
-inline std::array<uint8_t, 5> midiPacket{};
+inline ble::Array<64> midiPacket{};
 
 using namespace ble;
 namespace chr = ble::characteristic_options;
@@ -24,23 +24,15 @@ using MidiService = Service
 	< MidiSvcUuid
 	, Characteristic
 		< MidiChrUuid
-		, chr::BindVariable<&midiPacket>
+		, chr::BindArray<&midiPacket>
 		, chr::Notify
 		, chr::WriteNoResponse
 		>
 	>;
 
-//inline void OnConnect(const ble_gap_conn_desc& desc) {
-//}
-//
-//inline void OnDisconnect(int reason, const ble_gap_conn_desc& desc) {
-//}
-
 using Server = ble::Server
 	< MidiService
 	, svr::AdvertiseUuid<MidiService::Uuid>
-	//, svr::ConnectCallback<OnConnect>
-	//, svr::DisconnectCallback<OnDisconnect>
 	>;
 
 } // namespace blecfg

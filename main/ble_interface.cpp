@@ -15,15 +15,17 @@ BleInterface::BleInterface(Application& application)
 
 void BleInterface::OnTick() {
 	OPKEY_PROFILE_FUNCTION();
-
-	static int i = 0;
-	if (++i % 200 == 0) {
-		blecfg::midiPacket = { 0x80, 0x80, 0x90, 0x3c, 0x7f };
-		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
-	} else if (i % 200 == 1) {
-		blecfg::midiPacket = { 0x80, 0x80, 0x80, 0x3c, 0x00 };
-		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
-	}
+	//if (elapsed > continousStatusFps) {
+	//	send pedal values
+	//}
+	//static int i = 0;
+	//if (++i % 200 == 0) {
+	//	blecfg::midiPacket = { 0x80, 0x80, 0x90, 0x3c, 0x7f };
+	//	bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
+	//} else if (i % 200 == 1) {
+	//	blecfg::midiPacket = { 0x80, 0x80, 0x80, 0x3c, 0x00 };
+	//	bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
+	//}
 }
 
 void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor) {
@@ -34,8 +36,12 @@ void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Senso
 	auto& keyAcc = t_0.kinematic.acceleration[sensor];
 	if (keyState.pressed) {
 		fmt::print("key[{:2d}] down  pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n", static_cast<size_t>(sensor), keyPos, keyVel, keyAcc);
+		blecfg::midiPacket = { 0x80, 0x80, 0x90, 0x3c, 0x7f };
+		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
 	} else {
 		fmt::print("key[{:2d}] up    pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n", static_cast<size_t>(sensor), keyPos, keyVel, keyAcc);
+		blecfg::midiPacket = { 0x80, 0x80, 0x80, 0x3c, 0x00 };
+		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
 	}
 }
 
