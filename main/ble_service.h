@@ -13,7 +13,6 @@ struct ServiceMixinTag { };
 namespace service_options {
 
 struct Secondary : private ServiceMixinTag { };
-struct AdvertiseUuid : private ServiceMixinTag { };
 
 } // namespace service_options
 
@@ -43,20 +42,19 @@ struct Service : private ServiceTag {
 			, "Service definition contains an invalid type"
 			);
 
-	using UuidType = meta::GetDerivedType<UuidTag, UuidAuto, Options...>;
+	using Uuid = meta::GetDerivedType<UuidTag, UuidAuto, Options...>;
 	using CharacteristicTuple = meta::ExtractDerivedTypes<CharacteristicTag, Options...>;
 	static inline constexpr const auto nimbleGattCharacteristicDefinitions =
 		ExpandCharacteristicDefinitions<CharacteristicTuple>::value;
 
 	static inline constexpr const bool secondary = meta::HasType<service_options::Secondary, Options...>;
-	static inline constexpr const bool advertiseUuid = meta::HasType<service_options::AdvertiseUuid, Options...>;
 
 	constexpr static ble_gatt_svc_def NimbleServiceDefinition() noexcept {
 		return
 			{ // .type
 				secondary ? BLE_GATT_SVC_TYPE_SECONDARY : BLE_GATT_SVC_TYPE_PRIMARY
 			, // .uuid
-				reinterpret_cast<const ble_uuid_t*>(&UuidType::nimbleUuid)
+				reinterpret_cast<const ble_uuid_t*>(&Uuid::nimbleUuid)
 			, // .includes
 				nullptr
 			, // .characteristics

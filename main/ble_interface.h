@@ -20,7 +20,6 @@ namespace svr = ble::server_options;
 
 using MidiService = Service
 	< Uuid128<0x03b80e5a, 0xede8, 0x0b33, 0x0751, 0xce34ec4c700>
-	, svc::AdvertiseUuid
 	, Characteristic
 		< Uuid128<0x7772e5db, 0x3868, 0x4112, 0xa1a9, 0xf2669d106bf3>
 		, chr::BindVariable<&midiPacket>
@@ -37,6 +36,7 @@ using MidiService = Service
 
 using Server = ble::Server
 	< MidiService
+	, svr::AdvertiseUuid<MidiService::Uuid>
 	//, svr::ConnectCallback<OnConnect>
 	//, svr::DisconnectCallback<OnDisconnect>
 	>;

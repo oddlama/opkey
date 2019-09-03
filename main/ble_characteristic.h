@@ -106,7 +106,7 @@ struct Characteristic : private CharacteristicTag {
 			, "Characteristic definition contains an invalid type"
 			);
 
-	using UuidType = meta::GetDerivedType<UuidTag, UuidAuto, Options...>;
+	using Uuid = meta::GetDerivedType<UuidTag, UuidAuto, Options...>;
 
 	static inline constexpr const bool noReadAccess       = meta::HasType<characteristic_options::NoReadAccess,       Options...>;
 	static inline constexpr const bool noWriteAccess      = meta::HasType<characteristic_options::NoWriteAccess,      Options...>;
@@ -162,7 +162,7 @@ struct Characteristic : private CharacteristicTag {
 	constexpr static ble_gatt_chr_def NimbleCharacteristicDefinition() noexcept {
 		return
 			{ // .uuid
-				reinterpret_cast<const ble_uuid_t*>(&UuidType::nimbleUuid)
+				reinterpret_cast<const ble_uuid_t*>(&Uuid::nimbleUuid)
 			, // .access_cb
 				&NimbleOnAccess
 			, // .arg

@@ -150,20 +150,25 @@ private:
 		// stack fill this value automatically.  This is done by assigning the
 		// special value BLE_HS_ADV_TX_PWR_LVL_AUTO.
 		fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
-		fields.tx_pwr_lvl_is_present = 1;
+		fields.tx_pwr_lvl_is_present = true;
 
 		// TODO const cast?!
 		fields.name = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(name));
 		fields.name_len = strlen(name);
-		fields.name_is_complete = 1;
+		fields.name_is_complete = true;
 
-		fields.uuids16 = const_cast<ble_uuid16_t*>(&Uuid16<0x1811>::nimbleUuid);
-		fields.num_uuids16 = 1;
-		fields.uuids16_is_complete = 1;
-
-		//fields.uuids128 = const_cast<ble_uuid128_t*>(&Uuid128<0x03b80e5a, 0xede8, 0x0b33, 0x0751, 0xce34ec4c700>::nimbleUuid);
-		//fields.num_uuids128 = 1;
-		//fields.uuids128_is_complete = 1;
+		using AdvUuid = typename ServerType::AdvertiseUuid::Uuid;
+		if constexpr (ServerType::hasAdvertiseUuid) {
+			if constexpr (AdvUuid::bytes.size() == 4) {
+				fields.uuids16 = const_cast<ble_uuid16_t*>(&AdvUuid::nimbleUuid);
+				fields.num_uuids16 = 1;
+				fields.uuids16_is_complete = true;
+			} else if constexpr (AdvUuid::bytes.size() == 16) {
+				fields.uuids128 = const_cast<ble_uuid128_t*>(&AdvUuid::nimbleUuid);
+				fields.num_uuids128 = 1;
+				fields.uuids128_is_complete = true;
+			}
+		}
 
 		esp::check(ble_gap_adv_set_fields(&fields), "ble_gap_adv_set_fields()");
 
