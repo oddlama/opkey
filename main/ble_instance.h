@@ -7,6 +7,8 @@
 #include "ble_server.h"
 #include "ble_instance.h"
 
+#include <unordered_set>
+
 #include <esp_err.h>
 #include <esp_nimble_hci.h>
 #include <nimble/nimble_port.h>
@@ -117,6 +119,15 @@ public:
 	Instance& operator=(Instance&&) = delete;
 
 	template<typename Uuid>
+	void NotifyAll() {
+		using Chr = typename ServerType::template GetTypeByUuid<Uuid>;
+		static_assert(std::is_base_of_v<CharacteristicTag, Chr>, "Could not find a characteristic with the given uuid");
+		for (const auto& connHandle : allConnections) {
+			ble_gattc_notify(connHandle, Chr::valHandle);
+		}
+	}
+
+	template<typename Uuid>
 	static int Notify(uint16_t connHandle) {
 		using Chr = typename ServerType::template GetTypeByUuid<Uuid>;
 		static_assert(std::is_base_of_v<CharacteristicTag, Chr>, "Could not find a characteristic with the given uuid");
@@ -125,6 +136,15 @@ public:
 
 	static int Notify(uint16_t connHandle, uint16_t chrValHandle) {
 		return ble_gattc_notify(connHandle, chrValHandle);
+	}
+
+	template<typename Uuid>
+	void IndicateAll() {
+		using Chr = typename ServerType::template GetTypeByUuid<Uuid>;
+		static_assert(std::is_base_of_v<CharacteristicTag, Chr>, "Could not find a characteristic with the given uuid");
+		for (auto& connHandle : allConnections) {
+			ble_gattc_indicate(connHandle, Chr::valHandle);
+		}
 	}
 
 	template<typename Uuid>
@@ -233,6 +253,7 @@ private:
 					ble_gap_conn_desc desc;
 					esp::check(ble_gap_conn_find(event->connect.conn_handle, &desc), "ble_gap_conn_find()");
 					BlePrintConnDesc(desc);
+					allConnections.emplace(event->connect.conn_handle);
 					ServerType::OnConnect(desc);
 				} else {
 					// Connection failed; resume advertising.
@@ -243,6 +264,7 @@ private:
 			case BLE_GAP_EVENT_DISCONNECT:
 				esp::logi("disconnect; reason={:d} ", event->disconnect.reason);
 				BlePrintConnDesc(event->disconnect.conn);
+				allConnections.erase(event->connect.conn_handle);
 				ServerType::OnDisconnect(event->disconnect.reason, event->disconnect.conn);
 
 				// Connection terminated; resume advertising.
@@ -411,6 +433,7 @@ private:
 	const char* name;
 	uint8_t ownAddressType = 0;
 	bool inSync = false;
+	std::unordered_set<uint16_t> allConnections{};
 };
 
 

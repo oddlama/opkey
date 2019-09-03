@@ -11,16 +11,19 @@ namespace opkey {
 
 namespace blecfg {
 
-inline std::array<uint8_t, 32> midiPacket{};
+inline std::array<uint8_t, 5> midiPacket{};
 
 using namespace ble;
 namespace chr = ble::characteristic_options;
 namespace svr = ble::server_options;
 
+using MidiSvcUuid = Uuid128<0x03b80e5a, 0xede8, 0x4b33, 0xa751, 0x6ce34ec4c700>;
+using MidiChrUuid = Uuid128<0x7772e5db, 0x3868, 0x4112, 0xa1a9, 0xf2669d106bf3>;
+
 using MidiService = Service
-	< Uuid128<0x03b80e5a, 0xede8, 0x4b33, 0xa751, 0x6ce34ec4c700>
+	< MidiSvcUuid
 	, Characteristic
-		< Uuid128<0x7772e5db, 0x3868, 0x4112, 0xa1a9, 0xf2669d106bf3>
+		< MidiChrUuid
 		, chr::BindVariable<&midiPacket>
 		, chr::Notify
 		, chr::WriteNoResponse

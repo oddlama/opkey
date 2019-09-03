@@ -15,6 +15,15 @@ BleInterface::BleInterface(Application& application)
 
 void BleInterface::OnTick() {
 	OPKEY_PROFILE_FUNCTION();
+
+	static int i = 0;
+	if (++i % 200 == 0) {
+		blecfg::midiPacket = { 0x80, 0x80, 0x90, 0x3c, 0x7f };
+		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
+	} else if (i % 200 == 1) {
+		blecfg::midiPacket = { 0x80, 0x80, 0x80, 0x3c, 0x00 };
+		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
+	}
 }
 
 void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor) {
