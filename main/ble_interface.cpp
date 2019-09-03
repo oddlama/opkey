@@ -35,12 +35,12 @@ void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Senso
 	auto& keyVel = t_0.kinematic.velocity[sensor];
 	auto& keyAcc = t_0.kinematic.acceleration[sensor];
 	if (keyState.pressed) {
-		fmt::print("key[{:2d}] down  pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n", static_cast<size_t>(sensor), keyPos, keyVel, keyAcc);
-		blecfg::midiPacket = { 0x80, 0x80, 0x90, 0x3c, 0x7f };
+		//fmt::print("key[{:2d}] down  pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n", static_cast<size_t>(sensor), keyPos, keyVel, keyAcc);
+		blecfg::midiPacket = { 0x80, 0x80, 0x90, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), 0x3f };
 		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
 	} else {
-		fmt::print("key[{:2d}] up    pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n", static_cast<size_t>(sensor), keyPos, keyVel, keyAcc);
-		blecfg::midiPacket = { 0x80, 0x80, 0x80, 0x3c, 0x00 };
+		//fmt::print("key[{:2d}] up    pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n", static_cast<size_t>(sensor), keyPos, keyVel, keyAcc);
+		blecfg::midiPacket = { 0x80, 0x80, 0x80, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), 0x00 };
 		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
 	}
 }

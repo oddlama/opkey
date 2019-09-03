@@ -25,7 +25,7 @@ Visualizer::Visualizer(Application& application)
 		}
 	};
 
-	xTaskCreatePinnedToCore(DispatchMain, "OpKeyVisualizer", 8192, this, tskIDLE_PRIORITY + 1, &taskHandle, opkey::config::VisualizerCore);
+	//xTaskCreatePinnedToCore(DispatchMain, "OpKeyVisualizer", 8192, this, tskIDLE_PRIORITY + 1, &taskHandle, opkey::config::VisualizerCore);
 }
 
 Visualizer::~Visualizer() noexcept {
@@ -81,7 +81,7 @@ void Visualizer::TaskMain() {
 
 		// yeet!
 		vTaskDelay(10 / portTICK_PERIOD_MS);
-		taskYIELD();
+		//taskYIELD();
 	}
 }
 
