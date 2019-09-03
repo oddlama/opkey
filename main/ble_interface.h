@@ -15,11 +15,10 @@ inline std::array<uint8_t, 32> midiPacket{};
 
 using namespace ble;
 namespace chr = ble::characteristic_options;
-namespace svc = ble::service_options;
 namespace svr = ble::server_options;
 
 using MidiService = Service
-	< Uuid128<0x03b80e5a, 0xede8, 0x0b33, 0x0751, 0xce34ec4c700>
+	< Uuid128<0x03b80e5a, 0xede8, 0x4b33, 0xa751, 0x6ce34ec4c700>
 	, Characteristic
 		< Uuid128<0x7772e5db, 0x3868, 0x4112, 0xa1a9, 0xf2669d106bf3>
 		, chr::BindVariable<&midiPacket>
