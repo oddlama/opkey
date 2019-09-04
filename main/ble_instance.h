@@ -126,7 +126,6 @@ public:
 		for (const auto& connHandle : allConnections) {
 			ble_gattc_notify(connHandle, Chr::valHandle);
 		}
-		fmt::print("notify took {:8d}us\n", esp_timer_get_time() - t);
 	}
 
 	template<typename Uuid>
