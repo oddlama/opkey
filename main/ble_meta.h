@@ -135,8 +135,8 @@ struct ForTupleTypes;
 template<typename... Ts>
 struct ForTupleTypes<std::tuple<Ts...>> {
 	template<typename F>
-	inline static void Apply(F&& f) {
-		(... || f(static_cast<Ts*>(nullptr)));
+	inline static bool Apply(F&& f) {
+		return (... || f(static_cast<Ts*>(nullptr)));
 	}
 };
 

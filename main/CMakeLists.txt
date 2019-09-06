@@ -10,6 +10,7 @@ set(COMPONENT_SRCS
 	application.cpp
 	sensor_manager.cpp
 	nvs.cpp
+	packet.cpp
 	)
 
 set(COMPONENT_ADD_INCLUDEDIRS ".")

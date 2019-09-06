@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mode.h"
 #include "exception.h"
 #include "fmt.h"
 #include "config.h"
@@ -8,8 +9,8 @@
 #include "ble_interface.h"
 #include "visualizer.h"
 #include "statistics.h"
-
-#include "entt/entt.hpp"
+#include "entt.h"
+#include "packet.h"
 
 #include <memory>
 
@@ -18,6 +19,9 @@ namespace opkey {
 
 
 class Application {
+public:
+	inline static Application* instance = nullptr;
+
 public:
 	Application() = default;
 
@@ -40,14 +44,28 @@ public:
 public:
 	void operator()();
 
+	void SetMode(Mode newMode) {
+		onModeChangeSignal.publish(mode, newMode);
+		mode = newMode;
+	}
+
+	auto& GetMode() const noexcept {
+		return mode;
+	}
+
 	const auto& GetSensorManager() const noexcept { return sensorManager; }
 	auto& GetOnTickSink() noexcept { return onTickSink; }
+	auto& GetOnModeChangeSink() noexcept { return onModeChangeSink; }
 	auto& GetOnSensorStateChangeSink() noexcept { return sensorManager.GetOnSensorStateChangeSink(); }
 
 private:
+	Mode mode = Mode::Idle;
+
 	// Signals
 	entt::sigh<void()> onTickSignal{};
 	entt::sink<void()> onTickSink{onTickSignal};
+	entt::sigh<void(Mode, Mode)> onModeChangeSignal{};
+	entt::sink<void(Mode, Mode)> onModeChangeSink{onModeChangeSignal};
 
 	// Different components
 	SensorManager sensorManager{*this};

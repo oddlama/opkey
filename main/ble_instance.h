@@ -45,7 +45,7 @@ inline static void BlePrintConnDesc(ble_gap_conn_desc& desc) {
 	esp::logi("peer_id_addr_type={:d} peer_id_addr={}"
 			, desc.peer_id_addr.type
 			, AddrToString(desc.peer_id_addr.val));
-	esp::logi("conn_itvl={:d} conn_latency={:d} supervision_timeout={:d} encrypted={} authenticated={} bonded={}\n"
+	esp::logi("conn_itvl={:d} conn_latency={:d} supervision_timeout={:d} encrypted={} authenticated={} bonded={}"
 			, desc.conn_itvl
 			, desc.conn_latency
 			, desc.supervision_timeout
@@ -122,7 +122,6 @@ public:
 	void NotifyAll() {
 		using Chr = typename ServerType::template GetTypeByUuid<Uuid>;
 		static_assert(std::is_base_of_v<CharacteristicTag, Chr>, "Could not find a characteristic with the given uuid");
-		auto t = esp_timer_get_time();
 		for (const auto& connHandle : allConnections) {
 			ble_gattc_notify(connHandle, Chr::valHandle);
 		}
@@ -203,7 +202,7 @@ private:
 	}
 
 	void OnReset(int reason) {
-		esp::loge("Resetting state; reason={:d}\n", reason);
+		esp::loge("Resetting state; reason={:d}", reason);
 		inSync = false;
 	}
 
@@ -212,7 +211,7 @@ private:
 
 		// Figure out address to use while advertising (no privacy for now)
 		if (auto rc = ble_hs_id_infer_auto(0, &ownAddressType); rc != 0) {
-			esp::loge("error determining address type; rc={:d}\n", rc);
+			esp::loge("error determining address type; rc={:d}", rc);
 			return;
 		}
 
@@ -221,7 +220,7 @@ private:
 		// Printing ADDR
 		std::array<uint8_t, 6> addrVal{};
 		ble_hs_id_copy_addr(ownAddressType, addrVal.data(), nullptr);
-		esp::logi("Device Address: {}\n", AddrToString(addrVal.data()));
+		esp::logi("Device Address: {}", AddrToString(addrVal.data()));
 
 		// Begin advertising
 		EnableAdvertising();
@@ -297,7 +296,7 @@ private:
 
 			case BLE_GAP_EVENT_SUBSCRIBE:
 				esp::logi("subscribe event; conn_handle={:d} attr_handle={:d} "
-						"reason={:d} prevn={} curn={} previ={} curi={}\n",
+						"reason={:d} prevn={} curn={} previ={} curi={}",
 						event->subscribe.conn_handle,
 						event->subscribe.attr_handle,
 						event->subscribe.reason,
@@ -316,7 +315,7 @@ private:
 				return 0;
 
 			case BLE_GAP_EVENT_MTU:
-				esp::logi("mtu update event; conn_handle={:d} cid={:d} mtu={:d}\n",
+				esp::logi("mtu update event; conn_handle={:d} cid={:d} mtu={:d}",
 						event->mtu.conn_handle,
 						event->mtu.channel_id,
 						event->mtu.value);
@@ -348,7 +347,7 @@ private:
 					pkey.passkey = 123456; // This is the passkey to be entered on peer
 					esp::logi("Enter passkey {:d} on the peer side", pkey.passkey);
 					int rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
-					esp::logi("ble_sm_inject_io result: {:d}\n", rc);
+					esp::logi("ble_sm_inject_io result: {:d}", rc);
 				} else if (event->passkey.params.action == BLE_SM_IOACT_NUMCMP) {
 					esp::logi("Passkey on device's display: {:d}", event->passkey.params.numcmp);
 					esp::logi("Accept or reject the passkey through console in this format -> key Y or key N");
@@ -360,7 +359,7 @@ private:
 					//	esp::loge("Timeout! Rejecting the key");
 					//}
 					int rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
-					esp::logi("ble_sm_inject_io result: {:d}\n", rc);
+					esp::logi("ble_sm_inject_io result: {:d}", rc);
 				} else if (event->passkey.params.action == BLE_SM_IOACT_OOB) {
 					static uint8_t tem_oob[16] = {0};
 					pkey.action = event->passkey.params.action;
@@ -368,7 +367,7 @@ private:
 						pkey.oob[i] = tem_oob[i];
 					}
 					int rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
-					esp::logi("ble_sm_inject_io result: {:d}\n", rc);
+					esp::logi("ble_sm_inject_io result: {:d}", rc);
 				} else if (event->passkey.params.action == BLE_SM_IOACT_INPUT) {
 					esp::logi("Enter the passkey through console in this format-> key 123456");
 					pkey.action = event->passkey.params.action;
@@ -379,7 +378,7 @@ private:
 					//	esp::loge("Timeout! Passing 0 as the key");
 					//}
 					int rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
-					esp::logi("ble_sm_inject_io result: {:d}\n", rc);
+					esp::logi("ble_sm_inject_io result: {:d}", rc);
 				}
 				return 0;
 			}

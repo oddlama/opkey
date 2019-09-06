@@ -115,10 +115,12 @@ struct Server : private ServerTag {
 			bool prevNotify, bool curNotify, bool prevIndicate, bool curIndicate)
 	{
 		meta::ForTupleTypes<ServiceTuple>::Apply([&]<typename Svc>(Svc*) {
-			meta::ForTupleTypes<typename Svc::CharacteristicTuple>::Apply([&]<typename Chr>(Chr*) {
+			return meta::ForTupleTypes<typename Svc::CharacteristicTuple>::Apply([&]<typename Chr>(Chr*) {
 					if (attrHandle == Chr::valHandle) {
 						Chr::template OnSubscribe<InstanceType>(connHandle, reason, prevNotify, curNotify, prevIndicate, curIndicate);
+						return true;
 					}
+					return false;
 				});
 			});
 	}

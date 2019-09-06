@@ -2,6 +2,7 @@
 #include "dma.h"
 #include "error_visualizer.h"
 #include "nvs.h"
+#include "packet.h"
 
 #include <esp_timer.h>
 
@@ -9,17 +10,10 @@
 namespace opkey {
 
 
-uint8_t midiPacket[] = {
-	0x80,  // header
-	0x80,  // timestamp, not implemented
-	0x00,  // status
-	0x3c,  // 0x3c == 60 == middle c
-	0x00   // velocity
-};
-
 [[noreturn]] void Application::TaskMain(void*) {
 	try {
 		static Application application{};
+		Application::instance = &application;
 		application();
 	} catch(OpKeyException& e) {
 		esp::loge("Caught exception: {}\nDevice will abort() and restart in 60 seconds.", e.what());
@@ -62,6 +56,8 @@ void Application::operator()() {
 
 	profiler.PrintSummary();
 	profiler.Reset();
+
+	SetMode(Mode::NormalOperation);
 
 	while (true) {
 		{

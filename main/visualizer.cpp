@@ -65,10 +65,7 @@ void Visualizer::TaskMain() {
 				}
 			});
 
-			// Yield before and after updating to not starve the BLE task
-			taskYIELD();
 			ledStrip.Update();
-			taskYIELD();
 #ifndef NDEBUG
 			++debugLedFpsCount;
 #endif
