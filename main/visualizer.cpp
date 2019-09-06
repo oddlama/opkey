@@ -58,6 +58,7 @@ void Visualizer::TaskMain() {
 						default:
 						case calibration::CalibrationStatus::InvalidMinMax:       pixel = {  0, 20,  0, 1 }; break;
 						case calibration::CalibrationStatus::MissingFirstUpdate:  pixel = {  0, 20, 20, 1 }; break;
+						// FROM RED TO YELLOW TODO
 						case calibration::CalibrationStatus::MissingUsage:        pixel = { 20, 30,  0, 1 }; break;
 						case calibration::CalibrationStatus::RangeToSmall:        pixel = {  0, 20, 20, 1 }; break;
 						case calibration::CalibrationStatus::Calibrated:          pixel = { 20,  0,  0, 1 }; break;

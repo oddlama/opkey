@@ -67,6 +67,7 @@ extern CalibrationData calibrationData;
 void Reset();
 void Load();
 void Save();
+void Print();
 bool Calibrate(SensorData& newData);
 
 

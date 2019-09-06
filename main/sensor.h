@@ -12,6 +12,7 @@ public:
 	inline constexpr static const uint16_t keyCount = 88;
 	inline constexpr static const uint16_t pedalOffset = keyCount;
 	inline constexpr static const uint16_t pedalCount = 2;
+	inline constexpr static const uint16_t totalCount = keyCount + pedalCount;
 
 public:
 	Sensor() = default;
@@ -19,8 +20,8 @@ public:
 	Sensor(size_t index)
 		: index(index)
 	{
-		if (index >= keyCount + pedalCount) {
-			throw std::out_of_range("Sensor index must be in [0,keyCount+pedalCount)");
+		if (index >= totalCount) {
+			throw std::out_of_range("Sensor index must be in [0,totalCount)");
 		}
 	}
 
@@ -30,11 +31,15 @@ public:
 	size_t GetIndex() const noexcept { return index; }
 	size_t GetKeyIndex() const noexcept { return index; }
 	size_t GetPedalIndex() const noexcept { return index - pedalOffset; }
+	const char* GetName() const noexcept {
+		static_assert(config::sensorNames.size() == totalCount, "config::sensorNames must have totalCount entries!");
+		return config::sensorNames[index];
+	}
 
 	template<typename F>
 	static inline void ForEach(F&& f) noexcept(noexcept(f(Sensor{}))) {
 		Sensor s{};
-		for (s.index = 0; s.index < keyCount + pedalCount; ++s.index) {
+		for (s.index = 0; s.index < totalCount; ++s.index) {
 			f(s);
 		}
 	}

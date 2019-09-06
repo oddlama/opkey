@@ -1,8 +1,6 @@
 #include "nvs.h"
 #include "fmt.h"
 
-#include <nvs_flash.h>
-
 
 namespace opkey::nvs {
 

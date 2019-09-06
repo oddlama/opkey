@@ -1,4 +1,5 @@
 #include "packet.h"
+#include "calibration.h"
 #include "application.h"
 
 
@@ -11,8 +12,27 @@ size_t PacketSuccess::OnPacketRecv(Application& application, PacketBuffer& respo
 }
 
 
-size_t PacketRequestApplicationInfo::OnPacketRecv(Application& application, PacketBuffer& responseBuf) const {
-	return PacketApplicationInfo{}.Flatten(responseBuf);
+bool PacketGenericRequest::Verify(Application& application) const {
+	if (static_cast<uint8_t>(request) >= static_cast<uint8_t>(GenericRequest::_EnumMax)) {
+		esp::loge("Invalid packet PacketGenericRequest with request={}", static_cast<uint8_t>(request));
+		return false;
+	}
+
+	return true;
+}
+
+size_t PacketGenericRequest::OnPacketRecv(Application& application, PacketBuffer& responseBuf) const {
+	switch (request) {
+		case GenericRequest::VersionInfo:
+			return PacketVersionInfo{}.Flatten(responseBuf);
+
+		case GenericRequest::PrintCalibrationInfo:
+			calibration::Print();
+			return PacketSuccess{}.Flatten(responseBuf);
+
+		default:
+			return PacketGenericError{GenericError::InvalidGenericRequest}.Flatten(responseBuf);
+	}
 }
 
 
