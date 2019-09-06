@@ -44,14 +44,17 @@ public:
 public:
 	void operator()();
 
-	void SetMode(Mode newMode) {
-		onModeChangeSignal.publish(mode, newMode);
-		mode = newMode;
+	void SetNextMode(Mode newMode) {
+		nextMode = newMode;
 	}
 
-	auto& GetMode() const noexcept {
-		return mode;
+	void ApplyNextMode() {
+		onModeChangeSignal.publish(mode, nextMode);
+		mode = nextMode;
 	}
+
+	auto& GetMode() const noexcept { return mode; }
+	auto& GetNextMode() const noexcept { return nextMode; }
 
 	const auto& GetSensorManager() const noexcept { return sensorManager; }
 	auto& GetOnTickSink() noexcept { return onTickSink; }
@@ -60,6 +63,7 @@ public:
 
 private:
 	Mode mode = Mode::Idle;
+	Mode nextMode = mode;
 
 	// Signals
 	entt::sigh<void()> onTickSignal{};

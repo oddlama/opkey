@@ -57,7 +57,10 @@ void Application::operator()() {
 	profiler.PrintSummary();
 	profiler.Reset();
 
-	SetMode(Mode::NormalOperation);
+	// Load config, afterwards continue with nextMode
+	nextMode = Mode::NormalOperation;
+	onModeChangeSignal.publish(mode, Mode::LoadConfig);
+	ApplyNextMode();
 
 	while (true) {
 		{
@@ -69,6 +72,10 @@ void Application::operator()() {
 		if (now - profiler.GetResetTime() > 10000 * 1000) {
 			profiler.PrintSummary();
 			profiler.Reset();
+		}
+
+		if (mode != nextMode) {
+			ApplyNextMode();
 		}
 	}
 }

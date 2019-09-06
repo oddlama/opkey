@@ -1,3 +1,4 @@
+#include "calibration.h"
 #include "config.h"
 #include "visualizer.h"
 #include "application.h"
@@ -35,7 +36,7 @@ Visualizer::~Visualizer() noexcept {
 
 void Visualizer::TaskMain() {
 	while (true) {
-		do {
+		//do {
 			//std::scoped_lock lock{spinlock};
 
 			//if (not needsUpdate) {
@@ -43,33 +44,60 @@ void Visualizer::TaskMain() {
 			//}
 			//needsUpdate = false;
 
-			auto now = esp_timer_get_time();
-			Sensor::ForEachKey([&](Sensor key) {
-				size_t ledIndex = (Sensor::KeyCount - 1) - key.GetKeyIndex();
-				auto& pixel = ledStrip[ledIndex * 2];
-				auto& keyState = (*logicStateData)[key];
+		auto now = esp_timer_get_time();
 
-				auto deltaLastRelease = now - keyState.lastReleaseTime;
-				if (keyState.pressed) {
-					pixel = { 40, 0, 40, 10 };
-				} else if (deltaLastRelease > 200000) {
-					pixel = { };
-				} else {
-					double df = 1.0 - (deltaLastRelease / 200000.0);
-					pixel =
-						{ static_cast<uint8_t>(df * 40)
-						, 0
-						, static_cast<uint8_t>(df * 40)
-						, static_cast<uint8_t>(df * 10)
-						};
-				}
-			});
+		switch (Application::instance->GetMode()) {
+			case Mode::Calibrate:
+				//TODO VisualizeCalibration();
+				Sensor::ForEachKey([&](Sensor key) {
+					size_t ledIndex = (Sensor::keyCount - 1) - key.GetKeyIndex();
+					auto& pixel = ledStrip[ledIndex * 2];
+					const auto& c = calibration::calibrationData[key];
 
-			ledStrip.Update();
+					switch (c.GetCalibrationStatus()) {
+						default:
+						case calibration::CalibrationStatus::InvalidMinMax:       pixel = {  0, 20,  0, 1 }; break;
+						case calibration::CalibrationStatus::MissingFirstUpdate:  pixel = {  0, 20, 20, 1 }; break;
+						case calibration::CalibrationStatus::MissingUsage:        pixel = { 20, 30,  0, 1 }; break;
+						case calibration::CalibrationStatus::RangeToSmall:        pixel = {  0, 20, 20, 1 }; break;
+						case calibration::CalibrationStatus::Calibrated:          pixel = { 20,  0,  0, 1 }; break;
+					}
+				});
+				break;
+
+			case Mode::NormalOperation:
+				//TODO VisualizeNormal();
+				Sensor::ForEachKey([&](Sensor key) {
+					size_t ledIndex = (Sensor::keyCount - 1) - key.GetKeyIndex();
+					auto& pixel = ledStrip[ledIndex * 2];
+					auto& keyState = (*logicStateData)[key];
+
+					auto deltaLastRelease = now - keyState.lastReleaseTime;
+					if (keyState.pressed) {
+						pixel = { 40, 0, 40, 10 };
+					} else if (deltaLastRelease > 200000) {
+						pixel = { };
+					} else {
+						double df = 1.0 - (deltaLastRelease / 200000.0);
+						pixel =
+							{ static_cast<uint8_t>(df * 40)
+							, 0
+							, static_cast<uint8_t>(df * 40)
+							, static_cast<uint8_t>(df * 10)
+							};
+					}
+				});
+				break;
+
+			default:
+				break;
+		}
+
+		ledStrip.Update();
 #ifndef NDEBUG
-			++debugLedFpsCount;
+		++debugLedFpsCount;
 #endif
-		} while (false);
+		// } while (false);
 
 		taskYIELD();
 		// TODO wait only what is remaining X - now + begin to get X fps, with X being a config variable for vis fps
@@ -103,7 +131,7 @@ void Visualizer::OnSensorStateChange(const SensorManager& sensorManager, Sensor 
 
 	////std::scoped_lock lock{spinlock};
 
-	//size_t ledIndex = (Sensor::KeyCount - 1) - sensor.GetKeyIndex();
+	//size_t ledIndex = (Sensor::keyCount - 1) - sensor.GetKeyIndex();
 	//if (keyState.pressed) {
 	//	ledStrip[ledIndex] = { 0, 20, 30, 10 };
 	//} else {

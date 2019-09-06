@@ -66,7 +66,7 @@ inline constexpr const int SpiFrequency = SPI_MASTER_FREQ_10M / 2;
 // ================================================================
 
 inline constexpr const int NumAdcs = 6;
-inline constexpr const size_t NumChannels = 15;
+inline constexpr const size_t numChannels = 15;
 inline constexpr const size_t DefaultMultisamples = 64;
 
 /** Returns the sensor index for a given key index */
@@ -80,5 +80,30 @@ inline constexpr size_t GetSensorSwizzle(size_t keyIndex) {
 		return keyIndex;
 	}
 }
+
+/**
+ * The minimum coverage of the sensor range in percent requred
+ * for a sensor to be considered functional.
+ */
+inline constexpr const double minimumSensorValueCoverage = 0.25;
+
+/**
+ * The minimum amount of usage cycles (significant key presses)
+ * required for each sensor in the calibration phase.
+ */
+inline constexpr const uint16_t requiredCalibrationCycles = 8;
+
+/**
+ * The threshold which is used in the calibration phase to determine
+ * if a sensor is close to its min or max boundary.
+ * (in percent of the difference between min and max)
+ */
+inline constexpr const double calibrationNearBoundaryThreshold = 0.2;
+
+/**
+ * The minimum range covered before a travel between boundaries is
+ * considered valid.
+ */
+inline constexpr const double calibrationNearBoundaryMinRange = 0.05;
 
 } // namespace opkey::config

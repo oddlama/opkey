@@ -1,15 +1,17 @@
 #pragma once
 
+#include "ads7953.h"
+
 
 namespace opkey {
 
 
 class Sensor {
 public:
-	inline constexpr static const uint16_t KeyOffset = 0;
-	inline constexpr static const uint16_t KeyCount = 88;
-	inline constexpr static const uint16_t PedalOffset = 0;
-	inline constexpr static const uint16_t PedalCount = 2;
+	inline constexpr static const uint16_t keyOffset = 0;
+	inline constexpr static const uint16_t keyCount = 88;
+	inline constexpr static const uint16_t pedalOffset = keyCount;
+	inline constexpr static const uint16_t pedalCount = 2;
 
 public:
 	Sensor() = default;
@@ -17,22 +19,39 @@ public:
 	Sensor(size_t index)
 		: index(index)
 	{
-		if (index >= 90) {
-			throw std::out_of_range("Sensor index must be in [0,90)");
+		if (index >= keyCount + pedalCount) {
+			throw std::out_of_range("Sensor index must be in [0,keyCount+pedalCount)");
 		}
 	}
 
 	explicit operator size_t() const noexcept { return index; }
 
-	bool IsPedal() const noexcept { return index >= 88; }
-	size_t GetPedalIndex() const noexcept { return index - 88; }
+	bool IsPedal() const noexcept { return index >= pedalOffset; }
+	size_t GetIndex() const noexcept { return index; }
 	size_t GetKeyIndex() const noexcept { return index; }
+	size_t GetPedalIndex() const noexcept { return index - pedalOffset; }
+
+	template<typename F>
+	static inline void ForEach(F&& f) noexcept(noexcept(f(Sensor{}))) {
+		Sensor s{};
+		for (s.index = 0; s.index < keyCount + pedalCount; ++s.index) {
+			f(s);
+		}
+	}
 
 	template<typename F>
 	static inline void ForEachKey(F&& f) noexcept(noexcept(f(Sensor{}))) {
-		Sensor key{};
-		for (key.index = KeyOffset; key.index < KeyOffset + KeyCount; ++key.index) {
-			f(key);
+		Sensor s{};
+		for (s.index = keyOffset; s.index < keyOffset + keyCount; ++s.index) {
+			f(s);
+		}
+	}
+
+	template<typename F>
+	static inline void ForEachPedal(F&& f) noexcept(noexcept(f(Sensor{}))) {
+		Sensor s{};
+		for (s.index = pedalOffset; s.index < pedalOffset + pedalCount; ++s.index) {
+			f(s);
 		}
 	}
 

@@ -77,7 +77,7 @@ void AdcController::InitAdcs() {
 	auto continueOperation = ads7953::ContinueOperation{};
 	*continueOperationTx = continueOperation.ToCommand();
 
-	for (int i = 0; i < config::NumAdcs * config::NumChannels; ++i) {
+	for (int i = 0; i < config::NumAdcs * config::numChannels; ++i) {
 		continueOperationTransactions[i].flags     = 0;
 		continueOperationTransactions[i].length    = continueOperationTx->data.size() * 8;
 		continueOperationTransactions[i].tx_buffer = continueOperationTx->data.data();
@@ -113,8 +113,9 @@ void AdcController::Read(RawSensorData& data) {
 void AdcController::Read(SensorData& data, uint32_t samples) {
 	OPKEY_PROFILE_FUNCTION();
 
+	data = SensorData{};
 	auto Accumulate = [&](auto i, auto val) {
-			data[i] += double(val) / (samples * ads7953::MaxValue);
+			data[i] += double(val) / (samples * ads7953::values);
 		};
 
 	for (int s = 0; s < samples; ++s) {

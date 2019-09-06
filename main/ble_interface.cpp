@@ -51,7 +51,7 @@ int OnPacketWrite(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt
 BleInterface::BleInterface(Application& application)
 	: onTickConnection(application.GetOnTickSink().connect<&BleInterface::OnTick>(*this))
 	, onModeChangeConnection(application.GetOnModeChangeSink().connect<&BleInterface::OnModeChange>(*this))
-	, onSensorStateChangeConnection{}
+	, onSensorStateChangeConnection(application.GetOnSensorStateChangeSink().connect<&BleInterface::OnSensorStateChange>(*this))
 { }
 
 void BleInterface::OnTick() {
@@ -74,13 +74,12 @@ void BleInterface::OnTick() {
 }
 
 void BleInterface::OnModeChange(Mode oldMode, Mode newMode) {
+	//TODO needed?
 	switch (newMode) {
 		case Mode::NormalOperation:
-			onSensorStateChangeConnection = Application::instance->GetOnSensorStateChangeSink().connect<&BleInterface::OnSensorStateChange>(*this);
 			break;
 
 		default:
-			onSensorStateChangeConnection = entt::scoped_connection{};
 			break;
 	}
 }

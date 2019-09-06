@@ -32,61 +32,6 @@ public:
 	SensorHistory& operator=(SensorHistory&&) = default;
 
 	/**
-	 * Initialize the history with the given valid data
-	 */
-	void Init(SensorData& newData) {
-		OPKEY_PROFILE_FUNCTION();
-		for (int i = 0; i < Size(); ++i) {
-			Append(newData);
-		}
-	}
-
-	/**
-	 * Calculate and append a new data point to the history
-	 */
-	void Append(SensorData& newData) {
-		OPKEY_PROFILE_FUNCTION();
-
-		auto& t_0 = NextSlot();
-		auto& t_1 = Get(-1); // Previous state
-
-		auto now = esp_timer_get_time();
-		t_0.timestamp = now;
-
-		// Swizzle the raw data to match the sensor order
-		for (size_t i = 0; i < newData.size(); ++i) {
-			t_0.raw[i] = newData[config::GetSensorSwizzle(i)];
-		}
-
-		// Inverse delta time between now and t_1 in [1/s]
-		double dt = 1000000.0 / (t_0.timestamp - t_1.timestamp);
-
-		for (size_t i = 0; i < newData.size(); ++i) {
-			// Position is sqrt(data), because light intensity is 1/(distance^2)
-			// TODO normalize data based on calibration
-			// TODO position = sqrt(ApplyCalibration(newData[i], i));
-			t_0.kinematic.position[i] = sqrt(t_0.raw[i]);
-			t_0.kinematic.velocity[i] = (t_0.kinematic.position[i] - t_1.kinematic.position[i]) * dt;
-			t_0.kinematic.acceleration[i] = (t_0.kinematic.velocity[i] - t_1.kinematic.velocity[i]) * dt;
-
-			t_0.keyState[i] = t_1.keyState[i];
-			if ((not t_1.keyState[i].pressed && t_0.kinematic.position[i] > 0.4 && t_0.kinematic.velocity[i] > 2.0)) {
-				t_0.keyState[i].pressed = true;
-			} else if (t_1.keyState[i].pressed && t_0.kinematic.position[i] < 0.4) {
-				t_0.keyState[i].pressed = false;
-			}
-			t_0.keyState[i].changed = (t_0.keyState[i].pressed != t_1.keyState[i].pressed);
-			if (t_0.keyState[i].changed) {
-				if (t_0.keyState[i].pressed) {
-					t_0.keyState[i].lastPressTime = now;
-				} else {
-					t_0.keyState[i].lastReleaseTime = now;
-				}
-			}
-		}
-	}
-
-	/**
 	 * Retrieves data from the history, with 0 denoting the newest
 	 * history entry and size() - 1 the second newest.
 	 * Accessing negative elements is allowed. -1 will give the previous and (-size() + 1) the oldest
@@ -123,7 +68,6 @@ public:
 		return N;
 	}
 
-private:
 	/**
 	 * Advances the circular queue,
 	 * returning the new slot to be filled.
@@ -134,6 +78,7 @@ private:
 		return history[currentSlot];
 	}
 
+private:
 	// The history data
 	std::array<SensorDataCollection, N> history{};
 	// The current slot (newest entry)

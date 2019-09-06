@@ -8,8 +8,9 @@
 namespace opkey::ads7953 {
 
 
-inline constexpr static const uint16_t MaxValue = 0x1000;
-inline constexpr static const uint8_t NumChannels = 16;
+inline constexpr static const uint16_t maxValue = 0xfff;
+inline constexpr static const uint16_t values = maxValue + 1;
+inline constexpr static const uint8_t numChannels = 16;
 
 
 struct CommandTag{};

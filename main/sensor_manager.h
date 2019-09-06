@@ -2,6 +2,7 @@
 
 #include "sensor_history.h"
 #include "adc_controller.h"
+#include "mode.h"
 #include "entt.h"
 
 #include <stdexcept>
@@ -16,7 +17,7 @@ class Application;
 
 class SensorManager {
 public:
-	inline static constexpr const size_t HistorySize = 5;
+	inline static constexpr const size_t HistorySize = 3;
 
 public:
 	SensorManager(Application& application);
@@ -30,12 +31,17 @@ public:
 	auto& GetOnSensorStateChangeSink() noexcept { return onSensorStateChangeSink; }
 
 	void OnTick();
+	void OnModeChange(Mode oldMode, Mode newMode);
+
+	void InitHistory(SensorData& newData);
+	void CalculateNextSensorState(SensorData& newData);
 
 private:
 	SensorHistory<HistorySize> history{};
 	AdcController adcController{};
 
 	entt::scoped_connection onTickConnection;
+	entt::scoped_connection onModeChangeConnection;
 	entt::sigh<void(const SensorManager&, Sensor sensor)> onSensorStateChangeSignal{};
 	entt::sink<void(const SensorManager&, Sensor sensor)> onSensorStateChangeSink{onSensorStateChangeSignal};
 };

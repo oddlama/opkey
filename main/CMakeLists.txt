@@ -11,6 +11,7 @@ set(COMPONENT_SRCS
 	sensor_manager.cpp
 	nvs.cpp
 	packet.cpp
+	calibration.cpp
 	)
 
 set(COMPONENT_ADD_INCLUDEDIRS ".")

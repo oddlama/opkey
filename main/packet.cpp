@@ -27,7 +27,7 @@ bool PacketSetOperationMode::Verify(Application& application) const {
 
 size_t PacketSetOperationMode::OnPacketRecv(Application& application, PacketBuffer& responseBuf) const {
 	esp::logi("Received packet PacketSetOperationMode{{mode={}}}", static_cast<uint8_t>(newMode));
-	application.SetMode(newMode);
+	application.SetNextMode(newMode);
 	return PacketSuccess{}.Flatten(responseBuf);
 }
 
