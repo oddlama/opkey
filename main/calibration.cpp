@@ -42,12 +42,12 @@ void Print() {
 		std::memset(barBuffer.data(), '-', barBuffer.size());
 		auto& c = calibrationData[s];
 
-#define COPY_CSTR(arr, str) std::copy(str, str + strlen(str), arr.data());
+#define OPKEY_COPY_CSTR(arr, str) std::copy(str, str + strlen(str), arr.data());
 
 		fmt::print("{:4s} ", s.GetName());
 		switch (c.GetCalibrationStatus()) {
-			case CalibrationStatus::InvalidMinMax:      COPY_CSTR(barBuffer, "InvalidMinMax"); break;
-			case CalibrationStatus::MissingFirstUpdate: COPY_CSTR(barBuffer, "MissingFirstUpdate"); break;
+			case CalibrationStatus::InvalidMinMax:      OPKEY_COPY_CSTR(barBuffer, "InvalidMinMax"); break;
+			case CalibrationStatus::MissingFirstUpdate: OPKEY_COPY_CSTR(barBuffer, "MissingFirstUpdate"); break;
 			default: {
 				int from = static_cast<int>(barBuffer.size() * c.min);
 				int to = static_cast<int>(barBuffer.size() * c.max);
@@ -56,7 +56,7 @@ void Print() {
 			}
 		}
 
-#undef COPY_CSTR
+#undef OPKEY_COPY_CSTR
 
 		fmt::print("[{:48s}] in [{:6.2f},{:6.2f}] cov={:6.2f}% upd={:2d} use={:2d}"
 			, std::string_view{barBuffer.data(), barBuffer.size()}

@@ -17,9 +17,9 @@ enum class CalibrationStatus {
 
 
 struct SensorCalibrationData {
-	double min = std::numeric_limits<double>::max();
-	double max = std::numeric_limits<double>::min();
-	double range = 0.0;
+	double min = 1.0;
+	double max = 0.0;
+	double range = -1.0;
 
 	// true if the last update was the min value, false if it was max
 	bool lastUpdateWasMin = false;
@@ -39,8 +39,7 @@ struct SensorCalibrationData {
 
 	/** Returns the current calibration status */
 	CalibrationStatus GetCalibrationStatus() const noexcept {
-		if (min < 0.0 || min > 1.0 ||
-			max < 0.0 || max > 1.0) {
+		if (min > max) {
 			return CalibrationStatus::InvalidMinMax;
 		}
 
