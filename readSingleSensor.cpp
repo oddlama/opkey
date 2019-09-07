@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
 					((((val & 0x0000ff00) >>  8) - 'a') <<  4) |
 					((((val & 0x00ff0000) >> 16) - 'a') <<  8) |
 					((((val & 0xff000000) >> 24) - 'a') << 12);
-				dprintf(tFd, "%ld, %d, %f\n", (us * i / DATA_POINTS), val, sqrt(val));
+				dprintf(tFd, "%ld,%d\n", (us * i / DATA_POINTS), val);
 			}
 			close(tFd);
 			++transactionId;
