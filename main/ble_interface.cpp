@@ -50,7 +50,6 @@ int OnPacketWrite(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt
 
 BleInterface::BleInterface(Application& application)
 	: onTickConnection(application.GetOnTickSink().connect<&BleInterface::OnTick>(*this))
-	, onModeChangeConnection(application.GetOnModeChangeSink().connect<&BleInterface::OnModeChange>(*this))
 	, onSensorStateChangeConnection(application.GetOnSensorStateChangeSink().connect<&BleInterface::OnSensorStateChange>(*this))
 { }
 
@@ -73,17 +72,6 @@ void BleInterface::OnTick() {
 	//}
 }
 
-void BleInterface::OnModeChange(Mode oldMode, Mode newMode) {
-	//TODO needed?
-	switch (newMode) {
-		case Mode::NormalOperation:
-			break;
-
-		default:
-			break;
-	}
-}
-
 void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor) {
 	auto& t_0 = sensorManager.GetHistory()[0];
 	auto& keyState = t_0.keyState[sensor];
@@ -92,7 +80,11 @@ void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Senso
 	auto& keyAcc = t_0.kinematic.acceleration[sensor];
 	if (keyState.pressed) {
 		// TODO only accumulate midi buffer, send on tick or second fin event?
-		fmt::print("key[{:2d}] down  pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n", static_cast<size_t>(sensor), keyPos, keyVel, keyAcc);
+		fmt::print("key[0x{:02x}, {:2d}, {:4s}] down  pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n",
+				sensor.GetIndex(),
+				sensor.GetIndex(),
+				sensor.GetName(),
+				keyPos, keyVel, keyAcc);
 		auto v = ((keyVel - 2.0) / 4.0);
 		if (v < 0)
 			v = 0;

@@ -34,10 +34,18 @@ public:
 	void OnModeChange(Mode oldMode, Mode newMode);
 
 	void InitHistory(SensorData& newData);
+	void InitSingleSensorHistory();
 	void CalculateNextSensorState(SensorData& newData);
 
 private:
-	SensorHistory<HistorySize> history{};
+	inline static constexpr const size_t singleSensorHistorySize = std::max(sizeof(SensorHistory<HistorySize>) / 2, 8*4096u);
+
+	// XXX Not particularily good style, but necessary to save precious space.
+	union {
+		SensorHistory<HistorySize> history{};
+		std::array<uint16_t, singleSensorHistorySize> singleSensorHistory;
+	};
+
 	AdcController adcController{};
 
 	entt::scoped_connection onTickConnection;

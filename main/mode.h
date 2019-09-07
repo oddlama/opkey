@@ -1,9 +1,16 @@
 #pragma once
 
-#include "entt.h"
+#include "sensor.h"
 
 
 namespace opkey {
+
+
+namespace mode_params {
+
+inline Sensor singleSensorMonitoringSensor{};
+
+} // namespace mode_params
 
 
 enum class Mode : uint8_t {
@@ -11,6 +18,7 @@ enum class Mode : uint8_t {
 	LoadConfig,
 	NormalOperation,
 	Calibrate,
+	SingleSensorMonitoring,
 	_EnumMax,
 };
 

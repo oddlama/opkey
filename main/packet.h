@@ -10,6 +10,7 @@
 
 namespace opkey {
 
+// TODO let verify also check the packet size, as it can vary.
 
 using PacketBuffer alignas(16) = std::array<uint8_t, 64>;
 
@@ -24,6 +25,7 @@ enum class PacketType : uint8_t {
 enum class GenericRequest : uint8_t {
 	VersionInfo,
 	PrintCalibrationInfo,
+	SaveCalibrationInfo,
 	_EnumMax,
 };
 
@@ -106,6 +108,11 @@ public:
 
 public:
 	Mode newMode = Mode::Idle;
+	union {
+		struct {
+			uint8_t sensor;
+		} singleSensorMonitoring;
+	} params;
 };
 
 

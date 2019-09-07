@@ -2,6 +2,8 @@
 #include "calibration.h"
 #include "application.h"
 
+#include <driver/uart.h>
+
 
 namespace opkey {
 
@@ -20,9 +22,17 @@ SensorManager::SensorManager(Application& application)
  */
 void SensorManager::InitHistory(SensorData& newData) {
 	OPKEY_PROFILE_FUNCTION();
+
+	// Clean initial state
+	history = SensorHistory<HistorySize>{};
+
 	for (int i = 0; i < history.Size(); ++i) {
 		CalculateNextSensorState(newData);
 	}
+}
+
+void SensorManager::InitSingleSensorHistory() {
+	singleSensorHistory = {};
 }
 
 void SensorManager::CalculateNextSensorState(SensorData& newData) {
@@ -74,7 +84,7 @@ void SensorManager::OnTick() {
 	switch (Application::instance->GetMode()) {
 		case Mode::Calibrate: {
 			// TODO settings for samples
-			adcController.Read(tmpData, 8);
+			adcController.Read(tmpData, 2);
 			if (calibration::Calibrate(tmpData)) {
 				// Calibration is finished
 				calibration::Save();
@@ -83,9 +93,56 @@ void SensorManager::OnTick() {
 			break;
 		}
 
+		case Mode::SingleSensorMonitoring: {
+			fmt::print("3\n");
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
+			fmt::print("2\n");
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
+			fmt::print("1\n");
+			vTaskDelay(800 / portTICK_PERIOD_MS);
+			fmt::print("NOW!\n");
+			auto now = esp_timer_get_time();
+			adcController.ReadSingle(singleSensorHistory.data(), singleSensorHistory.size());
+			auto fin = esp_timer_get_time();
+			//int i = 0;
+			//double step = (fin - now) / static_cast<double>(singleSensorHistory.size());
+			//fmt::print("time (total {:d}us), {:4s}, sqrt({:4s})\n", fin - now, mode_params::singleSensorMonitoringSensor.GetName(), mode_params::singleSensorMonitoringSensor.GetName());
+			fmt::print("time (total {:d}us), {:4s}, sqrt({:4s})\n", fin - now, mode_params::singleSensorMonitoringSensor.GetName(), mode_params::singleSensorMonitoringSensor.GetName());
+			auto diff = fin - now;
+			write(1, ">>>>>>>>", 8);
+			char sensorName[4];
+			memset(sensorName, 0, 4);
+			memcpy(sensorName, mode_params::singleSensorMonitoringSensor.GetName(), strlen(mode_params::singleSensorMonitoringSensor.GetName()));
+			write(1, sensorName, 4);
+			write(1, &diff, sizeof(diff));
+			for (auto& d : singleSensorHistory) {
+				uint32_t expanded =
+					((((d & 0x000f) >>  0) + 'a') <<  0) |
+					((((d & 0x00f0) >>  4) + 'a') <<  8) |
+					((((d & 0x0f00) >>  8) + 'a') << 16) |
+					((((d & 0xf000) >> 12) + 'a') << 24);
+				write(1, &expanded, sizeof(expanded));
+			}
+			//for (auto& d : singleSensorHistory) {
+			//uart_write_bytes(UART_NUM_2, reinterpret_cast<const char*>(&diff), sizeof(diff));
+			//write(1, singleSensorHistory.data(), singleSensorHistory.size() * sizeof(*singleSensorHistory.data()));
+			//uart_write_bytes(UART_NUM_2, reinterpret_cast<const char*>(singleSensorHistory.data()), singleSensorHistory.size() * sizeof(*singleSensorHistory.data()));
+			//for (auto& d : singleSensorHistory) {
+			//	fmt::print("{:f}, {:d}, {:f}", step * i, d, sqrt(d));
+			//	if (++i % 16 == 16) {
+			//		fmt::print("|\n");
+			//	} else {
+			//		fmt::print("| ");
+			//	}
+			//}
+			fmt::print("\nsample time {:d}us\n", fin - now);
+			vTaskDelay(5000 / portTICK_PERIOD_MS);
+			break;
+		}
+
 		case Mode::NormalOperation: {
 			// TODO settings for samples
-			adcController.Read(tmpData, 8);
+			adcController.Read(tmpData, 2);
 			CalculateNextSensorState(tmpData);
 
 			// Notify listeners if a key state has changed
@@ -106,6 +163,7 @@ void SensorManager::OnTick() {
 void SensorManager::OnModeChange(Mode oldMode, Mode newMode) {
 	switch (newMode) {
 		case Mode::Calibrate: {
+			adcController.SetAdcModeAuto();
 			calibration::Reset();
 			break;
 		}
@@ -114,7 +172,13 @@ void SensorManager::OnModeChange(Mode oldMode, Mode newMode) {
 			calibration::Load();
 			break;
 
+		case Mode::SingleSensorMonitoring:
+			adcController.SetAdcModeSingle();
+			InitSingleSensorHistory();
+			break;
+
 		default: {
+			adcController.SetAdcModeAuto();
 			// Initialize history with valid data
 			adcController.Read(tmpData, 512);
 			InitHistory(tmpData);

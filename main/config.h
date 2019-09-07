@@ -58,27 +58,33 @@ inline constexpr const SpiConfig vspi =
 	  }
 	};
 
-inline constexpr const int SpiFrequency = SPI_MASTER_FREQ_10M / 2;
+inline constexpr const int spiFrequency = SPI_MASTER_FREQ_10M / 2;
 
 
 // ================================================================
 // Adc Config
 // ================================================================
 
-inline constexpr const int NumAdcs = 6;
+inline constexpr const int numAdcs = 6;
 inline constexpr const size_t numChannels = 15;
-inline constexpr const size_t DefaultMultisamples = 64;
+inline constexpr const size_t defaultMultisamples = 64;
 
-/** Returns the sensor index for a given key index */
-inline constexpr size_t GetSensorSwizzle(size_t keyIndex) {
+/** Returns the sensor index for a given raw sensor index */
+inline constexpr size_t GetSensorSwizzle(size_t rawIndex) {
 	// Default correction:
-	//    Sensor 0-87 = Key 87-0
-	//    Sensor 88-89 = Pedal 1-2 (Key 88-89)
-	if (keyIndex < 88) {
-		return 87 - keyIndex;
+	//    raw 0-87 = Key 87-0
+	//    raw 88-89 = Pedal 0-1
+	if (rawIndex < 88) {
+		return 87 - rawIndex;
 	} else {
-		return keyIndex;
+		return rawIndex;
 	}
+}
+
+/** Returns the raw index for a given sensor */
+inline constexpr size_t GetSensorSwizzleReverse(size_t sensorIndex) {
+	// Currently the function is reversible
+	return GetSensorSwizzle(sensorIndex);
 }
 
 // ================================================================

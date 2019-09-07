@@ -14,7 +14,7 @@ size_t PacketSuccess::OnPacketRecv(Application& application, PacketBuffer& respo
 
 bool PacketGenericRequest::Verify(Application& application) const {
 	if (static_cast<uint8_t>(request) >= static_cast<uint8_t>(GenericRequest::_EnumMax)) {
-		esp::loge("Invalid packet PacketGenericRequest with request={}", static_cast<uint8_t>(request));
+		esp::loge("Invalid PacketGenericRequest with request={}", static_cast<uint8_t>(request));
 		return false;
 	}
 
@@ -30,6 +30,10 @@ size_t PacketGenericRequest::OnPacketRecv(Application& application, PacketBuffer
 			calibration::Print();
 			return PacketSuccess{}.Flatten(responseBuf);
 
+		case GenericRequest::SaveCalibrationInfo:
+			calibration::Save();
+			return PacketSuccess{}.Flatten(responseBuf);
+
 		default:
 			return PacketGenericError{GenericError::InvalidGenericRequest}.Flatten(responseBuf);
 	}
@@ -38,7 +42,12 @@ size_t PacketGenericRequest::OnPacketRecv(Application& application, PacketBuffer
 
 bool PacketSetOperationMode::Verify(Application& application) const {
 	if (static_cast<uint8_t>(newMode) >= static_cast<uint8_t>(Mode::_EnumMax)) {
-		esp::loge("Invalid packet PacketSetOperationMode with newMode={}", static_cast<uint8_t>(newMode));
+		esp::loge("Invalid PacketSetOperationMode{{newMode={}}}", static_cast<uint8_t>(newMode));
+		return false;
+	}
+
+	if (newMode == Mode::SingleSensorMonitoring && params.singleSensorMonitoring.sensor >= Sensor::totalCount) {
+		esp::loge("Invalid PacketSetOperationMode{{newMode=SingleSensorMonitoring, sensor={}}}", static_cast<uint8_t>(params.singleSensorMonitoring.sensor));
 		return false;
 	}
 
@@ -46,8 +55,17 @@ bool PacketSetOperationMode::Verify(Application& application) const {
 }
 
 size_t PacketSetOperationMode::OnPacketRecv(Application& application, PacketBuffer& responseBuf) const {
-	esp::logi("Received packet PacketSetOperationMode{{mode={}}}", static_cast<uint8_t>(newMode));
+	esp::logi("Received PacketSetOperationMode{{mode={}}}", static_cast<uint8_t>(newMode));
 	application.SetNextMode(newMode);
+
+	switch (newMode) {
+		case Mode::SingleSensorMonitoring:
+			mode_params::singleSensorMonitoringSensor = params.singleSensorMonitoring.sensor;
+			break;
+		default:
+			break;
+	}
+
 	return PacketSuccess{}.Flatten(responseBuf);
 }
 

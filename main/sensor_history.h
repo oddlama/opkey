@@ -24,13 +24,6 @@ class SensorHistory {
 	static_assert(N >= 2, "SensorHistory may not contain less than 2 data points");
 
 public:
-	SensorHistory() = default;
-
-	SensorHistory(const SensorHistory&) = delete;
-	SensorHistory(SensorHistory&&) = default;
-	SensorHistory& operator=(const SensorHistory&) = delete;
-	SensorHistory& operator=(SensorHistory&&) = default;
-
 	/**
 	 * Retrieves data from the history, with 0 denoting the newest
 	 * history entry and size() - 1 the second newest.

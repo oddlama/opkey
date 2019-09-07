@@ -7,6 +7,9 @@
 #include <host/ble_gatt.h>
 #include <os/os_mbuf.h>
 
+#undef min
+#undef max
+
 
 namespace opkey::ble {
 

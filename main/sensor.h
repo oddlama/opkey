@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.h"
 #include "ads7953.h"
 
 
