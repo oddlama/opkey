@@ -7,34 +7,73 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <cstring>
+#include <fstream>
+#include <chrono>
+#include <array>
 #include <string>
+#include <string_view>
 
-#define TRANSACTION_BEGIN_CHAR '>'
-#define TRANSACTION_BEGIN_COUNT 8
+#define TRANSACTION_BEGIN_CHAR   '>'
+#define TRANSACTION_BEGIN_COUNT  8
+#define PRE_RECORD_TAG_CHAR      '~'
+#define PRE_RECORD_TAG_COUNT     8
+#define POST_RECORD_TAG_CHAR     '='
+#define POST_RECORD_TAG_COUNT    8
+
+#define CMD_PRE_RECORD   "./pre-record.sh"
+#define CMD_POST_RECEIVE "./post-receive.sh"
 
 #define DEVICE       "/dev/ttyUSB0"
 #define DATA_POINTS  (8 * 4096)
 
 const char* outPath = ".";
 
-std::string transaction_name(const char* sensorName, size_t transactionId) {
-	std::string filename = outPath;
-	filename += "/sensor_";
-	filename += sensorName;
-	filename += "_";
-	filename += std::to_string(transactionId);
-	return filename;
-}
+struct {
+	std::chrono::steady_clock::time_point recordBegin{};
+	std::chrono::steady_clock::time_point recordEnd{};
+	uint64_t reportedNanos = 0;
+	bool valid = false;
+	uint64_t uniqueSessionId = 0;
+} meta;
 
 bool exists(const std::string& filename) {
 	struct stat buffer;
 	return (stat(filename.data(), &buffer) == 0);
 }
 
+std::string next_transaction_name(std::string_view sensorName) {
+	size_t transactionId = 0;
+	std::string filename;
+	do {
+		filename = outPath;
+		filename += "/sensor_";
+		filename += sensorName;
+		filename += "_";
+		filename += std::to_string(transactionId);
+		filename += ".raw";
+		++transactionId;
+	} while (exists(filename));
+	return filename;
+}
+
 void die(const char* str) {
 	dprintf(2, "%s\n", str);
 	exit(1);
 }
+
+template<typename T>
+inline T Read(int fd) {
+	T t;
+	size_t total = 0;
+	while (total != sizeof(T)) {
+		int c = read(fd, (char*)&t + total, sizeof(T) - total);
+		if (c == -1) {
+			die("read() in transaction");
+		}
+		total += c;
+	}
+	return t;
+};
 
 int main(int argc, char** argv) {
 	if (argc != 2) {
@@ -89,36 +128,55 @@ int main(int argc, char** argv) {
 		if (newTransaction) {
 			newTransaction = false;
 
-			char sensorName[4];
-			read(fdUsb, sensorName, 4);
+			auto sensorNameRaw = Read<std::array<char, 4>>(fdUsb);
+			size_t len = 0;
+			for (; len < sensorNameRaw.size() && sensorNameRaw[len] != '\0'; ++len) { }
+			auto sensorName = std::string_view{sensorNameRaw.data(), len};
 
-			size_t transactionId = 0;
-			std::string filename;
-			do {
-				filename = transaction_name(sensorName, transactionId++);
-			} while (exists(filename));
-			int tFd = open(filename.data(), O_RDWR | O_CREAT, 0600);
-			int64_t us;
-			read(fdUsb, &us, sizeof(us));
-			dprintf(1, "[host: readSingleSensor] got new data, time: %ldus\n", us);
-			for (int i = 0; i < DATA_POINTS; ++i) {
-				uint32_t val;
-				int t = 0;
-				while (t != 4) {
-					int c = read(fdUsb, (char*)&val + t, sizeof(val) - t);
-					if (c == -1)
-						die("read() in transaction");
-					t += c;
+			auto us = Read<int64_t>(fdUsb);
+			meta.reportedNanos = static_cast<uint64_t>(us) * 1000;
+
+			dprintf(1, "[>] Receiving data for %.*s, elapsed time: %.3fms\n", (int)sensorName.size(), sensorName.data(), us / 1000.0);
+			std::string filename = next_transaction_name(sensorName);
+			if (auto of = std::ofstream{filename}; of) {
+				for (int i = 0; i < DATA_POINTS; ++i) {
+					auto val = Read<uint32_t>(fdUsb);
+					val =
+						((((val & 0x000000ff) >>  0) - 'a') <<  0) |
+						((((val & 0x0000ff00) >>  8) - 'a') <<  4) |
+						((((val & 0x00ff0000) >> 16) - 'a') <<  8) |
+						((((val & 0xff000000) >> 24) - 'a') << 12);
+					if (val < 0 || val > 0xfff) {
+						die("invalid value received()");
+					}
+					of  << (us * i / DATA_POINTS)
+						<< ","
+						<< val
+						<< "\n"
+						;
 				}
-				val =
-					((((val & 0x000000ff) >>  0) - 'a') <<  0) |
-					((((val & 0x0000ff00) >>  8) - 'a') <<  4) |
-					((((val & 0x00ff0000) >> 16) - 'a') <<  8) |
-					((((val & 0xff000000) >> 24) - 'a') << 12);
-				dprintf(tFd, "%ld,%d\n", (us * i / DATA_POINTS), val);
+			} else {
+				die("file ofstream()");
 			}
-			close(tFd);
-			++transactionId;
+
+			if (auto of = std::ofstream{filename + ".meta"}; of) {
+				of  << meta.uniqueSessionId
+					<< "\n"
+				    << std::chrono::duration_cast<std::chrono::nanoseconds>(meta.recordBegin.time_since_epoch()).count()
+					<< "\n"
+					<< std::chrono::duration_cast<std::chrono::nanoseconds>(meta.recordEnd.time_since_epoch()).count()
+					<< "\n"
+					<< meta.reportedNanos
+					<< "\n"
+					;
+			} else {
+				die("meta ofstream()");
+			}
+
+			dprintf(1, "[>] Data received.\n");
+			system((std::string(CMD_POST_RECEIVE) + " " + filename + " " + std::to_string(meta.uniqueSessionId)).data());
+			meta.valid = false;
+			++meta.uniqueSessionId;
 		} else {
 			char c;
 			int r = read(fdUsb, &c, 1);
@@ -131,14 +189,24 @@ int main(int argc, char** argv) {
 			write(1, &c, 1);
 
 			if (c == lastC) {
+				namespace ch = std::chrono;
 				++countSame;
+				if (countSame == TRANSACTION_BEGIN_COUNT && c == TRANSACTION_BEGIN_CHAR) {
+					if (not meta.valid) {
+						die("missing pre record tag");
+					}
+					newTransaction = true;
+				} else if (countSame == PRE_RECORD_TAG_COUNT && c == PRE_RECORD_TAG_CHAR) {
+					meta.valid = true;
+					meta.recordBegin = ch::steady_clock::now();
+					system((std::string(CMD_PRE_RECORD) + " " + outPath + " " + std::to_string(meta.uniqueSessionId)).data());
+				} else if (countSame == POST_RECORD_TAG_COUNT && c == POST_RECORD_TAG_CHAR) {
+					meta.recordEnd = ch::steady_clock::now();
+				}
 			} else {
 				countSame = 1;
 			}
 
-			if (countSame == TRANSACTION_BEGIN_COUNT && c == TRANSACTION_BEGIN_CHAR) {
-				newTransaction = true;
-			}
 			lastC = c;
 		}
 	}

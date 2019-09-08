@@ -94,19 +94,18 @@ void SensorManager::OnTick() {
 		}
 
 		case Mode::SingleSensorMonitoring: {
-			fmt::print("3\n");
+			fmt::print("3...\n");
 			vTaskDelay(1000 / portTICK_PERIOD_MS);
-			fmt::print("2\n");
+			fmt::print("2...\n");
 			vTaskDelay(1000 / portTICK_PERIOD_MS);
-			fmt::print("1\n");
-			vTaskDelay(800 / portTICK_PERIOD_MS);
-			fmt::print("NOW!\n");
+			write(1, "~~~~~~~~", 8);
+			fmt::print("1...\n");
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
+			fmt::print("SAMPLING!\n");
 			auto now = esp_timer_get_time();
 			adcController.ReadSingle(singleSensorHistory.data(), singleSensorHistory.size());
 			auto fin = esp_timer_get_time();
-			//int i = 0;
-			//double step = (fin - now) / static_cast<double>(singleSensorHistory.size());
-			//fmt::print("time (total {:d}us), {:4s}, sqrt({:4s})\n", fin - now, mode_params::singleSensorMonitoringSensor.GetName(), mode_params::singleSensorMonitoringSensor.GetName());
+			write(1, "========", 8);
 			fmt::print("time (total {:d}us), {:4s}, sqrt({:4s})\n", fin - now, mode_params::singleSensorMonitoringSensor.GetName(), mode_params::singleSensorMonitoringSensor.GetName());
 			auto diff = fin - now;
 			write(1, ">>>>>>>>", 8);
@@ -123,18 +122,6 @@ void SensorManager::OnTick() {
 					((((d & 0xf000) >> 12) + 'a') << 24);
 				write(1, &expanded, sizeof(expanded));
 			}
-			//for (auto& d : singleSensorHistory) {
-			//uart_write_bytes(UART_NUM_2, reinterpret_cast<const char*>(&diff), sizeof(diff));
-			//write(1, singleSensorHistory.data(), singleSensorHistory.size() * sizeof(*singleSensorHistory.data()));
-			//uart_write_bytes(UART_NUM_2, reinterpret_cast<const char*>(singleSensorHistory.data()), singleSensorHistory.size() * sizeof(*singleSensorHistory.data()));
-			//for (auto& d : singleSensorHistory) {
-			//	fmt::print("{:f}, {:d}, {:f}", step * i, d, sqrt(d));
-			//	if (++i % 16 == 16) {
-			//		fmt::print("|\n");
-			//	} else {
-			//		fmt::print("| ");
-			//	}
-			//}
 			fmt::print("\nsample time {:d}us\n", fin - now);
 			vTaskDelay(5000 / portTICK_PERIOD_MS);
 			break;
