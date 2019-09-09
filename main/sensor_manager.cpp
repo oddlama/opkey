@@ -117,7 +117,15 @@ void SensorManager::OnTick() {
 				memcpy(sensorName, mode_params::singleSensorMonitoringSensor.GetName(), strlen(mode_params::singleSensorMonitoringSensor.GetName()));
 				write(1, sensorName, 4);
 				write(1, &diff, sizeof(diff));
-				write(1, singleSensorHistory.data(), sizeof(singleSensorHistory));
+				//write(1, singleSensorHistory.data(), sizeof(singleSensorHistory));
+				for (auto& d : singleSensorHistory) {
+					uint32_t expanded =
+						((((d & 0x000f) >>  0) + 'a') <<  0) |
+						((((d & 0x00f0) >>  4) + 'a') <<  8) |
+						((((d & 0x0f00) >>  8) + 'a') << 16) |
+						((((d & 0xf000) >> 12) + 'a') << 24);
+					write(1, &expanded, sizeof(expanded));
+				}
 			}
 			break;
 		}

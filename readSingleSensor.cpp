@@ -140,7 +140,15 @@ int main(int argc, char** argv) {
 			std::string filename = next_transaction_name(sensorName);
 			if (auto of = std::ofstream{filename}; of) {
 				for (int i = 0; i < DATA_POINTS; ++i) {
-					auto val = Read<uint16_t>(fdUsb);
+					auto val = Read<uint32_t>(fdUsb);
+					val =
+						((((val & 0x000000ff) >>  0) - 'a') <<  0) |
+						((((val & 0x0000ff00) >>  8) - 'a') <<  4) |
+						((((val & 0x00ff0000) >> 16) - 'a') <<  8) |
+						((((val & 0xff000000) >> 24) - 'a') << 12);
+					if (val < 0 || val > 0xfff) {
+						die("invalid value received()");
+					}
 					of  << (us * i / DATA_POINTS)
 						<< ","
 						<< val
