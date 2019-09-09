@@ -94,36 +94,31 @@ void SensorManager::OnTick() {
 		}
 
 		case Mode::SingleSensorMonitoring: {
-			fmt::print("3...\n");
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
-			fmt::print("2...\n");
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
-			write(1, "~~~~~~~~", 8);
-			fmt::print("1...\n");
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
-			fmt::print("SAMPLING!\n");
-			auto now = esp_timer_get_time();
-			adcController.ReadSingle(singleSensorHistory.data(), singleSensorHistory.size());
-			auto fin = esp_timer_get_time();
-			write(1, "========", 8);
-			fmt::print("time (total {:d}us), {:4s}, sqrt({:4s})\n", fin - now, mode_params::singleSensorMonitoringSensor.GetName(), mode_params::singleSensorMonitoringSensor.GetName());
-			auto diff = fin - now;
-			write(1, ">>>>>>>>", 8);
-			char sensorName[4];
-			memset(sensorName, 0, 4);
-			memcpy(sensorName, mode_params::singleSensorMonitoringSensor.GetName(), strlen(mode_params::singleSensorMonitoringSensor.GetName()));
-			write(1, sensorName, 4);
-			write(1, &diff, sizeof(diff));
-			for (auto& d : singleSensorHistory) {
-				uint32_t expanded =
-					((((d & 0x000f) >>  0) + 'a') <<  0) |
-					((((d & 0x00f0) >>  4) + 'a') <<  8) |
-					((((d & 0x0f00) >>  8) + 'a') << 16) |
-					((((d & 0xf000) >> 12) + 'a') << 24);
-				write(1, &expanded, sizeof(expanded));
+			// TODO nimble_port_stop();
+			// TODO nimble_port_deinit();
+			// TODO esp_nimble_hci_and_controller_deinit();
+			while (true) {
+				fmt::print("3...\n");
+				vTaskDelay(1000 / portTICK_PERIOD_MS);
+				fmt::print("2...\n");
+				vTaskDelay(1000 / portTICK_PERIOD_MS);
+				write(1, "\005\005\005\005\005\005\005\005", 8);
+				fmt::print("1...\n");
+				vTaskDelay(1000 / portTICK_PERIOD_MS);
+				fmt::print("NOW!\n");
+				auto now = esp_timer_get_time();
+				adcController.ReadSingle(singleSensorHistory.data(), singleSensorHistory.size());
+				auto fin = esp_timer_get_time();
+				write(1, "\004\004\004\004\004\004\004\004", 8);
+				auto diff = fin - now;
+				write(1, "\027\027\027\027\027\027\027\027", 8);
+				char sensorName[4];
+				memset(sensorName, 0, 4);
+				memcpy(sensorName, mode_params::singleSensorMonitoringSensor.GetName(), strlen(mode_params::singleSensorMonitoringSensor.GetName()));
+				write(1, sensorName, 4);
+				write(1, &diff, sizeof(diff));
+				write(1, singleSensorHistory.data(), sizeof(singleSensorHistory));
 			}
-			fmt::print("\nsample time {:d}us\n", fin - now);
-			vTaskDelay(5000 / portTICK_PERIOD_MS);
 			break;
 		}
 

@@ -227,13 +227,27 @@ class Capture:
         if self.audioData is None:
             return
 
-        firstSample = int(1.0 * self.audioFs)
-        lastSample = int((1.0 + (self.meta.getElapsedNsMcu() / 1000000000)) * self.audioFs)
-        print(f"sample range [{firstSample},{lastSample}]")
+        range = (0.9, 1.0 + (self.meta.getElapsedNsMcu() / 1000000000))
+        offset = 1.0
+        first = int(range[0] * self.audioFs)
+        last = int(range[1] * self.audioFs)
+        tWav = np.linspace((range[0] - offset) * 1000, (range[1] - offset) * 1000, num=(last - first))
+
+        def running_mean(x, N):
+            cumsum = np.cumsum(np.insert(x, 0, 0))
+            return (cumsum[N:] - cumsum[:-N]) / float(N)
+
         fig.add_trace(go.Scattergl(
-            name='{} wav'.format(self.getIdentifier()),
-            x=self.t,
-            y=self.audioData[firstSample:lastSample],
+            name='{} wav (l)'.format(self.getIdentifier()),
+            x=tWav,
+            y=running_mean(np.absolute(self.audioData[first:last,0]), 200),
+            yaxis=plotAxisWav,
+        ))
+
+        fig.add_trace(go.Scattergl(
+            name='{} wav (r)'.format(self.getIdentifier()),
+            x=tWav,
+            y=running_mean(np.absolute(self.audioData[first:last,1]), 200),
             yaxis=plotAxisWav,
         ))
 

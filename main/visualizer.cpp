@@ -108,7 +108,6 @@ void Visualizer::TaskMain() {
 	}
 }
 
-
 void Visualizer::OnTick() {
 	OPKEY_PROFILE_FUNCTION();
 	logicStateData = &sensorManager.GetHistory()[0].keyState;

@@ -26,19 +26,10 @@ public:
 
 		int adcIndex = config::GetSensorSwizzleReverse(mode_params::singleSensorMonitoringSensor.GetIndex()) / config::numChannels;
 		auto& adc = adcs[adcIndex];
-		int t = 0;
-		while (t < count) {
-			auto busGuard = adc.AcquireBus();
-			int ops = std::min(config::numAdcs * config::numChannels, count - t);
-			for (int i = 0; i < ops; ++i) {
-				adc.TransferPolling(continueOperationTransactions[i]);
-			}
-
-			for (int i = 0; i < ops; ++i) {
-				data[t + i] = (*continueOperationRxs)[i].GetValue();
-			}
-
-			t += ops;
+		auto busGuard = adc.AcquireBus();
+		for (size_t i = 0; i < count; ++i) {
+			adc.TransferPolling(continueOperationTransactions[0]);
+			data[i] = (*continueOperationRxs)[0].GetValue();
 		}
 	}
 

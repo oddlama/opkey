@@ -64,9 +64,15 @@ inline static size_t bleInitialized = false;
 inline static void NimbleHostTask(void* param) {
 	esp::logi("NimbleHostTask started");
 
-	// This function will return only when nimble_port_stop() is executed
-	nimble_port_run();
-	nimble_port_freertos_deinit();
+	// This function will return only when nimble_port_stop() is executed,
+	// or a callback throws.
+	try {
+		nimble_port_run();
+		nimble_port_freertos_deinit();
+	} catch(std::exception& e) {
+		esp::loge("Caught exception: {}\nAborting.", e.what());
+		abort();
+	}
 }
 
 
@@ -109,8 +115,14 @@ public:
 	}
 
 	~Instance() noexcept {
-		nimble_port_stop();
 		bleInitialized = false;
+		if (auto err = nimble_port_stop(); err == 0) {
+			nimble_port_deinit();
+
+			if (auto err = esp_nimble_hci_and_controller_deinit(); err != ESP_OK) {
+				esp::loge("error in esp_nimble_hci_and_controller_deinit(): {}", esp_err_to_name(err));
+			}
+		}
 	}
 
 	Instance(const Instance&) = delete;

@@ -13,12 +13,12 @@
 #include <string>
 #include <string_view>
 
-#define TRANSACTION_BEGIN_CHAR   '>'
-#define TRANSACTION_BEGIN_COUNT  8
-#define PRE_RECORD_TAG_CHAR      '~'
+#define PRE_RECORD_TAG_CHAR      '\005'
 #define PRE_RECORD_TAG_COUNT     8
-#define POST_RECORD_TAG_CHAR     '='
+#define POST_RECORD_TAG_CHAR     '\004'
 #define POST_RECORD_TAG_COUNT    8
+#define TRANSACTION_BEGIN_CHAR   '\027'
+#define TRANSACTION_BEGIN_COUNT  8
 
 #define CMD_PRE_RECORD   "./pre-record.sh"
 #define CMD_POST_RECEIVE "./post-receive.sh"
@@ -140,15 +140,7 @@ int main(int argc, char** argv) {
 			std::string filename = next_transaction_name(sensorName);
 			if (auto of = std::ofstream{filename}; of) {
 				for (int i = 0; i < DATA_POINTS; ++i) {
-					auto val = Read<uint32_t>(fdUsb);
-					val =
-						((((val & 0x000000ff) >>  0) - 'a') <<  0) |
-						((((val & 0x0000ff00) >>  8) - 'a') <<  4) |
-						((((val & 0x00ff0000) >> 16) - 'a') <<  8) |
-						((((val & 0xff000000) >> 24) - 'a') << 12);
-					if (val < 0 || val > 0xfff) {
-						die("invalid value received()");
-					}
+					auto val = Read<uint16_t>(fdUsb);
 					of  << (us * i / DATA_POINTS)
 						<< ","
 						<< val
