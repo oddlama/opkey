@@ -76,17 +76,12 @@ void Visualizer::TaskMain() {
 
 					auto deltaLastRelease = now - logicState.lastReleaseTime;
 					if (logicState.pressed) {
-						pixel = { 40, 0, 40, 10 };
+						pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, logicState.pressVelocity);
 					} else if (deltaLastRelease > 200000) {
-						pixel = { };
+						pixel.Clear();
 					} else {
 						double df = 1.0 - (deltaLastRelease / 200000.0);
-						pixel =
-							{ static_cast<uint8_t>(df * 40)
-							, 0
-							, static_cast<uint8_t>(df * 40)
-							, static_cast<uint8_t>(df * 10)
-							};
+						pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, df * logicState.pressVelocity);
 					}
 				});
 				break;

@@ -37,7 +37,7 @@ void SensorManager::CalculateNextSensorState(SensorData& newData) {
 
 	auto now = esp_timer_get_time();
 	double lowThreshold = 0.2;
-	double highThreshold = 0.8;
+	double highThreshold = 0.5;
 
 	for (size_t i = 0; i < newData.size(); ++i) {
 		auto& state = logicStates[i];
@@ -49,6 +49,9 @@ void SensorManager::CalculateNextSensorState(SensorData& newData) {
 		auto prevPos = state.pos;
 		state.pos = calibration::calibrationData[i].Apply(rawPos);
 
+		// TODO maximum press time?
+		// TODO check attack slopes at thresholds to calc hit velocity?
+		state.changed = false;
 		if (state.pressed) {
 			if (state.pos < lowThreshold) {
 				// The key was pressed and the position is now
@@ -71,12 +74,18 @@ void SensorManager::CalculateNextSensorState(SensorData& newData) {
 				state.pressed = true;
 				state.changed = true;
 				state.lastPressTime = now;
+
 				state.pressVelocity = (state.pos - state.lowRisingEdgePos) * 1000000.0 / risingEdgeDeltaTime;
-				fmt::print("key[0x{:02x}, {:2d}, {:4s}] down  curPos: {:7.2f} vel: {:7.2f}\n",
+				state.pressVelocity /= 30.0;
+				if (state.pressVelocity > 1.0) {
+					state.pressVelocity = 1.0;
+				}
+
+				fmt::print("key[0x{:02x}, {:2d}, {:4s}] down  curPos: {:7.2f} vel: {:7.2f}%\n",
 						Sensor{i}.GetIndex(),
 						Sensor{i}.GetIndex(),
 						Sensor{i}.GetName(),
-						state.pos, state.pressVelocity);
+						state.pos, state.pressVelocity * 100.0);
 			}
 		}
 	}

@@ -82,14 +82,8 @@ void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Senso
 		//		sensor.GetIndex(),
 		//		sensor.GetName(),
 		//		keyPos, keyVel);
-		auto v = (state.pressVelocity / 40.0);
-		if (v < 0)
-			v = 0;
-		else if (v > 1)
-			v = 1;
-
 		// TODO midiPacketGenerator.append(0x90, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), static_cast<uint8_t>(0x7f * v));
-		blecfg::midiPacketSend = { 0x80, 0x80, 0x90, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), static_cast<uint8_t>(0x7f * v) };
+		blecfg::midiPacketSend = { 0x80, 0x80, 0x90, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), static_cast<uint8_t>(0x7f * state.pressVelocity) };
 		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
 	} else {
 		//fmt::print("key[{:2d}] up    pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n", static_cast<size_t>(sensor), keyPos, keyVel, keyAcc);
