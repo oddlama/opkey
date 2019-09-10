@@ -38,6 +38,7 @@ void Save() {
 void Print() {
 	static std::array<char, 48> barBuffer{};
 
+	// TODO currently only prints raw values (c.smth * c.smth)
 	Sensor::ForEach([&](Sensor s) {
 		std::memset(barBuffer.data(), '-', barBuffer.size());
 		auto& c = calibrationData[s];
@@ -49,8 +50,8 @@ void Print() {
 			case CalibrationStatus::InvalidMinMax:      OPKEY_COPY_CSTR(barBuffer, "InvalidMinMax"); break;
 			case CalibrationStatus::MissingFirstUpdate: OPKEY_COPY_CSTR(barBuffer, "MissingFirstUpdate"); break;
 			default: {
-				int from = static_cast<int>(barBuffer.size() * c.min);
-				int to = static_cast<int>(barBuffer.size() * c.max);
+				int from = static_cast<int>(barBuffer.size() * c.min * c.min);
+				int to = static_cast<int>(barBuffer.size() * c.max * c.max);
 				std::memset(barBuffer.data() + from, '#', to - from);
 				break;
 			}
@@ -60,9 +61,9 @@ void Print() {
 
 		fmt::print("[{:48s}] in [{:6.2f},{:6.2f}] cov={:6.2f}% upd={:2d} use={:2d}"
 			, std::string_view{barBuffer.data(), barBuffer.size()}
-			, 100.0 * c.min
-			, 100.0 * c.max
-			, 100.0 * c.range
+			, 100.0 * c.min   * c.min
+			, 100.0 * c.max   * c.max
+			, 100.0 * c.range * c.range
 			, c.updateCycles
 			, c.usageCycles);
 
@@ -86,7 +87,7 @@ bool Calibrate(SensorData& newData) {
 	bool allSensorsCalibrated = true;
 	for (size_t i = 0; i < newData.size(); ++i) {
 		// Swizzle the raw data to match the sensor order
-		auto& val = newData[config::GetSensorSwizzle(i)];
+		auto val = sqrt(newData[config::GetSensorSwizzle(i)]);
 		auto& c = calibrationData[i];
 
 		// Update max

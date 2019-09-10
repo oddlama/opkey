@@ -18,17 +18,14 @@ SensorManager::SensorManager(Application& application)
 
 
 /**
- * Initialize the history with the given valid data
+ * Initialize the states with the given valid data
  */
-void SensorManager::InitHistory(SensorData& newData) {
+void SensorManager::InitLogicStates(SensorData& newData) {
 	OPKEY_PROFILE_FUNCTION();
 
 	// Clean initial state
-	history = SensorHistory<HistorySize>{};
-
-	for (int i = 0; i < history.Size(); ++i) {
-		CalculateNextSensorState(newData);
-	}
+	logicStates = {};
+	CalculateNextSensorState(newData);
 }
 
 void SensorManager::InitSingleSensorHistory() {
@@ -38,40 +35,48 @@ void SensorManager::InitSingleSensorHistory() {
 void SensorManager::CalculateNextSensorState(SensorData& newData) {
 	OPKEY_PROFILE_FUNCTION();
 
-	auto& t_0 = history.NextSlot();
-	auto& t_1 = history[-1]; // Previous state
-
 	auto now = esp_timer_get_time();
-	t_0.timestamp = now;
-
-	// Swizzle the raw data to match the sensor order
-	for (size_t i = 0; i < newData.size(); ++i) {
-		t_0.raw[i] = newData[config::GetSensorSwizzle(i)];
-	}
-
-	// Inverse delta time between now and t_1 in [1/s]
-	double dt = 1000000.0 / (t_0.timestamp - t_1.timestamp);
+	double lowThreshold = 0.2;
+	double highThreshold = 0.8;
 
 	for (size_t i = 0; i < newData.size(); ++i) {
-		// Position is sqrt(data), because light intensity is 1/(distance^2)
-		// TODO normalize data based on calibration
-		// TODO position = sqrt(ApplyCalibration(newData[i], i));
-		t_0.kinematic.position[i] = sqrt(t_0.raw[i]);
-		t_0.kinematic.velocity[i] = (t_0.kinematic.position[i] - t_1.kinematic.position[i]) * dt;
-		t_0.kinematic.acceleration[i] = (t_0.kinematic.velocity[i] - t_1.kinematic.velocity[i]) * dt;
+		auto& state = logicStates[i];
 
-		t_0.keyState[i] = t_1.keyState[i];
-		if ((not t_1.keyState[i].pressed && t_0.kinematic.position[i] > 0.4 && t_0.kinematic.velocity[i] > 2.0)) {
-			t_0.keyState[i].pressed = true;
-		} else if (t_1.keyState[i].pressed && t_0.kinematic.position[i] < 0.4) {
-			t_0.keyState[i].pressed = false;
-		}
-		t_0.keyState[i].changed = (t_0.keyState[i].pressed != t_1.keyState[i].pressed);
-		if (t_0.keyState[i].changed) {
-			if (t_0.keyState[i].pressed) {
-				t_0.keyState[i].lastPressTime = now;
-			} else {
-				t_0.keyState[i].lastReleaseTime = now;
+		// 1. Swizzle the raw data to match the sensor order
+		// 2. Position is sqrt(data), because light intensity is 1/(distance^2)
+		auto rawPos = sqrt(newData[config::GetSensorSwizzle(i)]);
+		// 3. Apply calibration
+		auto prevPos = state.pos;
+		state.pos = calibration::calibrationData[i].Apply(rawPos);
+
+		if (state.pressed) {
+			if (state.pos < lowThreshold) {
+				// The key was pressed and the position is now
+				// below the low threshold, so it is now released
+				state.pressed = false;
+				state.changed = true;
+				state.lastReleaseTime = now;
+			}
+		} else {
+			if (prevPos < lowThreshold && state.pos >= lowThreshold) {
+				// Key was not pressed and the position is
+				// the first past the low threshold
+				state.lowRisingEdgeTime = now;
+				state.lowRisingEdgePos = state.pos;
+			} else if (state.pos >= highThreshold) {
+				// Key was not pressed and the position is
+				// past the high threshold, therefore the key is
+				// now pressed.
+				auto risingEdgeDeltaTime = now - state.lowRisingEdgeTime;
+				state.pressed = true;
+				state.changed = true;
+				state.lastPressTime = now;
+				state.pressVelocity = (state.pos - state.lowRisingEdgePos) * 1000000.0 / risingEdgeDeltaTime;
+				fmt::print("key[0x{:02x}, {:2d}, {:4s}] down  curPos: {:7.2f} vel: {:7.2f}\n",
+						Sensor{i}.GetIndex(),
+						Sensor{i}.GetIndex(),
+						Sensor{i}.GetName(),
+						state.pos, state.pressVelocity);
 			}
 		}
 	}
@@ -94,9 +99,9 @@ void SensorManager::OnTick() {
 		}
 
 		case Mode::SingleSensorMonitoring: {
-			// TODO nimble_port_stop();
-			// TODO nimble_port_deinit();
-			// TODO esp_nimble_hci_and_controller_deinit();
+			// TODO debug disable bt: nimble_port_stop();
+			// TODO debug disable bt: nimble_port_deinit();
+			// TODO debug disable bt: esp_nimble_hci_and_controller_deinit();
 			while (true) {
 				fmt::print("3...\n");
 				vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -136,9 +141,8 @@ void SensorManager::OnTick() {
 			CalculateNextSensorState(tmpData);
 
 			// Notify listeners if a key state has changed
-			const auto& t_0 = history[0];
 			Sensor::ForEachKey([&](Sensor key) {
-				if (t_0.keyState[key].changed) {
+				if (logicStates[key].changed) {
 					onSensorStateChangeSignal.publish(*this, key);
 				}
 			});
@@ -169,9 +173,8 @@ void SensorManager::OnModeChange(Mode oldMode, Mode newMode) {
 
 		default: {
 			adcController.SetAdcModeAuto();
-			// Initialize history with valid data
 			adcController.Read(tmpData, 512);
-			InitHistory(tmpData);
+			InitLogicStates(tmpData);
 			break;
 		}
 	}

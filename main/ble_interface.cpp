@@ -73,19 +73,16 @@ void BleInterface::OnTick() {
 }
 
 void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor) {
-	auto& t_0 = sensorManager.GetHistory()[0];
-	auto& keyState = t_0.keyState[sensor];
-	auto& keyPos = t_0.kinematic.position[sensor];
-	auto& keyVel = t_0.kinematic.velocity[sensor];
-	auto& keyAcc = t_0.kinematic.acceleration[sensor];
-	if (keyState.pressed) {
+	//TODO send midi reset all keys up when mode is changed!
+	auto& state = sensorManager.GetLogicStates()[sensor];
+	if (state.pressed) {
 		// TODO only accumulate midi buffer, send on tick or second fin event?
-		fmt::print("key[0x{:02x}, {:2d}, {:4s}] down  pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n",
-				sensor.GetIndex(),
-				sensor.GetIndex(),
-				sensor.GetName(),
-				keyPos, keyVel, keyAcc);
-		auto v = ((keyVel - 2.0) / 4.0);
+		//fmt::print("key[0x{:02x}, {:2d}, {:4s}] down  pos: {:7.2f} vel: {:7.2f}\n",
+		//		sensor.GetIndex(),
+		//		sensor.GetIndex(),
+		//		sensor.GetName(),
+		//		keyPos, keyVel);
+		auto v = (state.pressVelocity / 40.0);
 		if (v < 0)
 			v = 0;
 		else if (v > 1)

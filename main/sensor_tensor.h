@@ -42,43 +42,31 @@ using SensorData = SensorTensor<double>;
 
 
 /**
- * Kinematic sensor data calculated from raw value and
- * previous data points.
- */
-struct SensorKinematicData {
-	SensorTensor<double> position{};
-	SensorTensor<double> velocity{};
-	SensorTensor<double> acceleration{};
-};
-
-/**
  * Logical state which is calculated based on the captured
  * history of sensor data
  */
 struct LogicState {
+	// Current position
+	double pos = 0.0;
+
 	// Key/Pedal is currently pressed
 	bool pressed = false;
 	// Key/Pedal state has changed regarding to the last known state
 	bool changed = false;
 	// Last known time this key/pedal was pressed
-	int64_t lastPressTime = -1;
+	int64_t lastPressTime = 0;
+	// Key/Pedal press-hit velocity
+	double pressVelocity = 0.0;
 	// Last known time this key/pedal was released
-	int64_t lastReleaseTime = -1;
+	int64_t lastReleaseTime = 0;
+
+	// Time of key rising above lowThreshold
+	int64_t lowRisingEdgeTime = 0;
+	// Key position at low rising edge
+	double lowRisingEdgePos = 0.0;
 };
 
 using SensorLogicStateData = SensorTensor<LogicState>;
-
-struct SensorDataCollection {
-	int64_t timestamp = -1;
-	SensorData raw{};
-	SensorKinematicData kinematic{};
-	SensorLogicStateData keyState{};
-
-	/** Checks if this contains valid data */
-	operator bool() const noexcept {
-		return timestamp >= 0;
-	}
-};
 
 
 } // namespace opkey

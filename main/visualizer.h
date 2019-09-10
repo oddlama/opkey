@@ -35,9 +35,9 @@ public:
 private:
 	// Task related stuff
 	xTaskHandle taskHandle = nullptr;
-	Spinlock spinlock{};
-	bool needsUpdate = false;
-	const SensorLogicStateData* logicStateData = nullptr;
+	//TODO Spinlock spinlock{};
+	//TODO bool needsUpdate = false;
+	SensorLogicStateData logicStates{};
 
 #ifndef NDEBUG
 	int64_t debugLedFpsTime = 0;

@@ -13,7 +13,6 @@ Visualizer::Visualizer(Application& application)
 	, onSensorStateChangeConnection(application.GetOnSensorStateChangeSink().connect<&Visualizer::OnSensorStateChange>(*this))
 	, sensorManager(application.GetSensorManager())
 {
-	logicStateData = &sensorManager.GetHistory()[0].keyState;
 	static auto DispatchMain = [](void* param) [[noreturn]] {
 		try {
 			static_cast<Visualizer*>(param)->TaskMain();
@@ -73,10 +72,10 @@ void Visualizer::TaskMain() {
 				Sensor::ForEachKey([&](Sensor key) {
 					size_t ledIndex = (Sensor::keyCount - 1) - key.GetKeyIndex();
 					auto& pixel = ledStrip[ledIndex * 2];
-					auto& keyState = (*logicStateData)[key];
+					auto& logicState = logicStates[key];
 
-					auto deltaLastRelease = now - keyState.lastReleaseTime;
-					if (keyState.pressed) {
+					auto deltaLastRelease = now - logicState.lastReleaseTime;
+					if (logicState.pressed) {
 						pixel = { 40, 0, 40, 10 };
 					} else if (deltaLastRelease > 200000) {
 						pixel = { };
@@ -110,7 +109,7 @@ void Visualizer::TaskMain() {
 
 void Visualizer::OnTick() {
 	OPKEY_PROFILE_FUNCTION();
-	logicStateData = &sensorManager.GetHistory()[0].keyState;
+	logicStates = sensorManager.GetLogicStates();
 
 #ifndef NDEBUG
 	int64_t now = esp_timer_get_time();
@@ -123,24 +122,25 @@ void Visualizer::OnTick() {
 #endif
 }
 
+// TODO only OnSensorStateChangeFrameComplete
 void Visualizer::OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor) {
 	if (sensor.IsPedal()) {
 		return;
 	}
 
 	//auto& h0 = sensorManager.GetHistory()[0];
-	//auto& keyState = h0.keyState[sensor];
+	//auto& logicState = h0.logicState[sensor];
 
 	////std::scoped_lock lock{spinlock};
 
 	//size_t ledIndex = (Sensor::keyCount - 1) - sensor.GetKeyIndex();
-	//if (keyState.pressed) {
+	//if (logicState.pressed) {
 	//	ledStrip[ledIndex] = { 0, 20, 30, 10 };
 	//} else {
 	//	// TODO ledStrip[ledIndex] = { };
 	//}
 
-	needsUpdate = true;
+	//TODO needsUpdate = true;
 }
 
 
