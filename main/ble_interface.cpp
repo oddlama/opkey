@@ -83,6 +83,7 @@ void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Senso
 		//		sensor.GetName(),
 		//		keyPos, keyVel);
 		// TODO midiPacketGenerator.append(0x90, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), static_cast<uint8_t>(0x7f * v));
+		// TODO *0x7f is not right, *0x80 and check == 1.0 before
 		blecfg::midiPacketSend = { 0x80, 0x80, 0x90, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), static_cast<uint8_t>(0x7f * state.pressVelocity) };
 		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
 	} else {

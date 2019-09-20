@@ -36,8 +36,6 @@ void SensorManager::CalculateNextSensorState(SensorData& newData) {
 	OPKEY_PROFILE_FUNCTION();
 
 	auto now = esp_timer_get_time();
-	double lowThreshold = 0.2;
-	double highThreshold = 0.5;
 
 	for (size_t i = 0; i < newData.size(); ++i) {
 		auto& state = logicStates[i];
@@ -53,39 +51,68 @@ void SensorManager::CalculateNextSensorState(SensorData& newData) {
 		// TODO check attack slopes at thresholds to calc hit velocity?
 		state.changed = false;
 		if (state.pressed) {
-			if (state.pos < lowThreshold) {
+			if (state.pos < config::posLowThreshold) {
 				// The key was pressed and the position is now
 				// below the low threshold, so it is now released
 				state.pressed = false;
 				state.changed = true;
 				state.lastReleaseTime = now;
+
+				// 0 is not used for an invalid state here, but rather to ensure
+				// that all calculations with it will yield a high difference to 'now'.
+				state.lowRisingEdgeTime = 0;
+				state.controlRisingEdgeTime = 0;
 			}
 		} else {
-			if (prevPos < lowThreshold && state.pos >= lowThreshold) {
-				// Key was not pressed and the position is
-				// the first past the low threshold
+			// TODO state system? else ifs are carrying some intermediate states
+
+			// TODO maybe choose a backupControlThreshold, that is ALWAYS hit by any sufficient keypress.
+			// if then the high or low thresholds are not met, and if we record local minima and maxima
+			// between, then we can calculate a keypress even if it missed the low/high threshold
+
+			// Key was is pressed
+			if (prevPos < config::posLowThreshold &&
+					state.pos >= config::posLowThreshold &&
+					now - state.lowRisingEdgeTime > config::posThresholdJitterDelayUs) {
+				// The position is the first past the low threshold
 				state.lowRisingEdgeTime = now;
 				state.lowRisingEdgePos = state.pos;
-			} else if (state.pos >= highThreshold) {
-				// Key was not pressed and the position is
-				// past the high threshold, therefore the key is
-				// now pressed.
+			} else if (state.pos >= config::posControlThreshold &&
+					now - state.controlRisingEdgeTime > config::posThresholdJitterDelayUs) {
+				// The position is at or past the control threshold
+				state.controlRisingEdgeTime = now;
+				state.controlRisingEdgePos = state.pos;
+			} else if (state.pos >= config::posHighThreshold) {
+				// The position is past the high threshold
 				auto risingEdgeDeltaTime = now - state.lowRisingEdgeTime;
 				state.pressed = true;
 				state.changed = true;
 				state.lastPressTime = now;
 
+				// TODO apply velocity curve config::VelocityCurve(...)
 				state.pressVelocity = (state.pos - state.lowRisingEdgePos) * 1000000.0 / risingEdgeDeltaTime;
-				state.pressVelocity /= 30.0;
+				auto TODO_RAW_PRESS_VELO = state.pressVelocity;
+
+				if (state.pressVelocity < 20.0) {
+					state.pressVelocity /= 26.0;
+				} else {
+					// Compress
+					state.pressVelocity = 20.0 / 26.0 + (state.pressVelocity - 20.0) / 50.0;
+				}
+
 				if (state.pressVelocity > 1.0) {
 					state.pressVelocity = 1.0;
 				}
 
-				fmt::print("key[0x{:02x}, {:2d}, {:4s}] down  curPos: {:7.2f} vel: {:7.2f}%\n",
-						Sensor{i}.GetIndex(),
+				fmt::print("key[0x{:02x}, {:4s}] down [l,c,h]: [{:7.2f},{:7.2f}@{:6d},{:7.2f}@{:6d}] vel: {:7.2f}\n",
 						Sensor{i}.GetIndex(),
 						Sensor{i}.GetName(),
-						state.pos, state.pressVelocity * 100.0);
+						state.lowRisingEdgePos,
+						state.controlRisingEdgePos,
+						state.controlRisingEdgeTime - state.lowRisingEdgeTime,
+						state.pos,
+						now - state.lowRisingEdgeTime,
+						TODO_RAW_PRESS_VELO);
 			}
 		}
 	}
@@ -112,34 +139,62 @@ void SensorManager::OnTick() {
 			// TODO debug disable bt: nimble_port_deinit();
 			// TODO debug disable bt: esp_nimble_hci_and_controller_deinit();
 			while (true) {
+				// esp32 uart safe data conversion
+				auto WriteEnc = [](const auto* data, size_t count) {
+					static std::array<uint16_t, 32> sendBuf{};
+					static size_t sendBufCount = 0;
+
+					sendBufCount = 0;
+					auto begin = reinterpret_cast<const uint8_t*>(data);
+					auto end = begin + count;
+					for (auto d = begin; d != end; ++d) {
+						sendBuf[sendBufCount] =
+							((((*d & 0x0f) >> 0) + 'a') << 0) |
+							((((*d & 0xf0) >> 4) + 'a') << 8);
+						if (++sendBufCount == sendBuf.size()) {
+							write(1, sendBuf.data(), sizeof(uint16_t) * sendBuf.size());
+							sendBufCount = 0;
+						}
+					}
+
+					if (sendBufCount > 0) {
+						write(1, sendBuf.data(), sizeof(uint16_t) * sendBufCount);
+					}
+				};
+
+				// Countdown
 				fmt::print("3...\n");
 				vTaskDelay(1000 / portTICK_PERIOD_MS);
 				fmt::print("2...\n");
 				vTaskDelay(1000 / portTICK_PERIOD_MS);
+				// Notify host of pending capture
 				write(1, "\005\005\005\005\005\005\005\005", 8);
 				fmt::print("1...\n");
 				vTaskDelay(1000 / portTICK_PERIOD_MS);
 				fmt::print("NOW!\n");
+
+				// Read data
 				auto now = esp_timer_get_time();
 				adcController.ReadSingle(singleSensorHistory.data(), singleSensorHistory.size());
 				auto fin = esp_timer_get_time();
+
+				// Notify host of finished capture
 				write(1, "\004\004\004\004\004\004\004\004", 8);
 				auto diff = fin - now;
+
+				// Notify host of beginning transaction
 				write(1, "\027\027\027\027\027\027\027\027", 8);
-				char sensorName[4];
-				memset(sensorName, 0, 4);
-				memcpy(sensorName, mode_params::singleSensorMonitoringSensor.GetName(), strlen(mode_params::singleSensorMonitoringSensor.GetName()));
-				write(1, sensorName, 4);
-				write(1, &diff, sizeof(diff));
-				//write(1, singleSensorHistory.data(), sizeof(singleSensorHistory));
-				for (auto& d : singleSensorHistory) {
-					uint32_t expanded =
-						((((d & 0x000f) >>  0) + 'a') <<  0) |
-						((((d & 0x00f0) >>  4) + 'a') <<  8) |
-						((((d & 0x0f00) >>  8) + 'a') << 16) |
-						((((d & 0xf000) >> 12) + 'a') << 24);
-					write(1, &expanded, sizeof(expanded));
-				}
+
+				std::array<char, 4> sensorName{};
+				memcpy(sensorName.data(), mode_params::singleSensorMonitoringSensor.GetName(), strlen(mode_params::singleSensorMonitoringSensor.GetName()));
+				WriteEnc(sensorName.data(), sensorName.size());
+
+				WriteEnc(&calibration::calibrationData[mode_params::singleSensorMonitoringSensor].min, sizeof(double));
+				WriteEnc(&calibration::calibrationData[mode_params::singleSensorMonitoringSensor].max, sizeof(double));
+				WriteEnc(&diff, sizeof(diff));
+				uint32_t dataPoints = singleSensorHistory.size();
+				WriteEnc(&dataPoints, sizeof(dataPoints));
+				WriteEnc(&singleSensorHistory, sizeof(singleSensorHistory));
 			}
 			break;
 		}

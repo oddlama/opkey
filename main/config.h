@@ -137,5 +137,18 @@ inline constexpr const std::array<const char*, 90> sensorNames =
 	, "Soft", "Damp"
 	};
 
+inline constexpr const double posLowThreshold = 0.15;
+inline constexpr const double posControlThreshold = 0.25;
+inline constexpr const double posHighThreshold = 0.32;
+
+/**
+ * The minimum amout of time (in us) that must have passed before any
+ * of the thresholds can be triggered again. This is to prevent jitter,
+ * noise and other "quick succession" triggers to influence the calculation.
+ *
+ * For reference: A cycle for a quick staccato-keypress lasts for around 60ms to 120ms.
+ */
+inline constexpr const int64_t posThresholdJitterDelayUs = 5000;
+
 
 } // namespace opkey::config

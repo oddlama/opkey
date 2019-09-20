@@ -24,7 +24,6 @@
 #define CMD_POST_RECEIVE "./post-receive.sh"
 
 #define DEVICE       "/dev/ttyUSB0"
-#define DATA_POINTS  (8 * 4096)
 
 const char* outPath = ".";
 
@@ -35,6 +34,18 @@ struct {
 	bool valid = false;
 	uint64_t uniqueSessionId = 0;
 } meta;
+
+struct CalibrationData {
+	double min = 0.0;
+	double max = 0.0;
+
+	inline static constexpr const uint16_t maxSensorValue = 0xfff;
+
+	double Apply(uint16_t rawSensorValue) {
+		double s = static_cast<double>(rawSensorValue) / maxSensorValue;
+		return (sqrt(s) - min) / (max - min);
+	}
+};
 
 bool exists(const std::string& filename) {
 	struct stat buffer;
@@ -71,6 +82,18 @@ inline T Read(int fd) {
 			die("read() in transaction");
 		}
 		total += c;
+	}
+	return t;
+};
+
+template<typename T>
+inline T ReadDec(int fd) {
+	T t;
+	for (int i = 0; i < sizeof(T); ++i) {
+		auto val = Read<uint16_t>(fd);
+		reinterpret_cast<uint8_t*>(&t)[i] =
+			((((val & 0x000000ff) >> 0) - 'a') << 0) |
+			((((val & 0x0000ff00) >> 8) - 'a') << 4);
 	}
 	return t;
 };
@@ -128,28 +151,30 @@ int main(int argc, char** argv) {
 		if (newTransaction) {
 			newTransaction = false;
 
-			auto sensorNameRaw = Read<std::array<char, 4>>(fdUsb);
-			size_t len = 0;
-			for (; len < sensorNameRaw.size() && sensorNameRaw[len] != '\0'; ++len) { }
-			auto sensorName = std::string_view{sensorNameRaw.data(), len};
+			auto sensorNameRaw = ReadDec<std::array<char, 4>>(fdUsb);
+			for (auto& c : sensorNameRaw) {
+				if (c == '#') {
+					c = '+';
+				}
+			}
 
-			auto us = Read<int64_t>(fdUsb);
+			size_t snLen = 0;
+			for (; snLen < sensorNameRaw.size() && sensorNameRaw[snLen] != '\0'; ++snLen) { }
+			auto sensorName = std::string_view{sensorNameRaw.data(), snLen};
+
+			auto calibrationData = ReadDec<CalibrationData>(fdUsb);
+			auto us = ReadDec<int64_t>(fdUsb);
 			meta.reportedNanos = static_cast<uint64_t>(us) * 1000;
 
-			dprintf(1, "[>] Receiving data for %.*s, elapsed time: %.3fms\n", (int)sensorName.size(), sensorName.data(), us / 1000.0);
+			auto dataPoints = ReadDec<uint32_t>(fdUsb);
+
+			dprintf(1, "[>] Receiving %u bytes for %.*s, elapsed time: %.3fms\n", dataPoints, (int)snLen, sensorName.data(), us / 1000.0);
+			dprintf(1, "[>] Calibration data: min %f, max %f\n", calibrationData.min, calibrationData.max);
 			std::string filename = next_transaction_name(sensorName);
 			if (auto of = std::ofstream{filename}; of) {
-				for (int i = 0; i < DATA_POINTS; ++i) {
-					auto val = Read<uint32_t>(fdUsb);
-					val =
-						((((val & 0x000000ff) >>  0) - 'a') <<  0) |
-						((((val & 0x0000ff00) >>  8) - 'a') <<  4) |
-						((((val & 0x00ff0000) >> 16) - 'a') <<  8) |
-						((((val & 0xff000000) >> 24) - 'a') << 12);
-					if (val < 0 || val > 0xfff) {
-						die("invalid value received()");
-					}
-					of  << (us * i / DATA_POINTS)
+				for (int i = 0; i < dataPoints; ++i) {
+					auto val = calibrationData.Apply(ReadDec<uint16_t>(fdUsb));
+					of  << (us * i / dataPoints)
 						<< ","
 						<< val
 						<< "\n"

@@ -49,10 +49,11 @@ struct LogicState {
 	// Current position
 	double pos = 0.0;
 
-	// Key/Pedal is currently pressed
-	bool pressed = false;
 	// Key/Pedal state has changed regarding to the last known state
 	bool changed = false;
+	// Key/Pedal is currently pressed
+	bool pressed = false;
+
 	// Last known time this key/pedal was pressed
 	int64_t lastPressTime = 0;
 	// Key/Pedal press-hit velocity
@@ -60,10 +61,15 @@ struct LogicState {
 	// Last known time this key/pedal was released
 	int64_t lastReleaseTime = 0;
 
-	// Time of key rising above lowThreshold
+	// Time of key rising above posLowThreshold
 	int64_t lowRisingEdgeTime = 0;
 	// Key position at low rising edge
 	double lowRisingEdgePos = 0.0;
+
+	// Time of key rising above posControlThreshold
+	int64_t controlRisingEdgeTime = 0;
+	// Key position at control rising edge
+	double controlRisingEdgePos = 0.0;
 };
 
 using SensorLogicStateData = SensorTensor<LogicState>;
