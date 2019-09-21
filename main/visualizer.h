@@ -30,6 +30,7 @@ public:
 	[[noreturn]] void TaskMain();
 
 	void OnTick();
+	void OnModeChange(Mode oldMode, Mode newMode);
 	void OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor);
 
 private:
@@ -46,6 +47,7 @@ private:
 
 	// Signals
 	entt::scoped_connection onTickConnection;
+	entt::scoped_connection onModeChangeConnection;
 	entt::scoped_connection onSensorStateChangeConnection;
 
 	// Led strip and sensor manager ref

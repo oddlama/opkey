@@ -47,7 +47,7 @@ inline void HsvToRgb(Color& color, double hue, double saturation, double value) 
 	g += m;
 	b += m;
 
-	color.Set(r, g, b);
+	color.SetRgb(r, g, b);
 }
 
 

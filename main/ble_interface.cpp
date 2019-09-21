@@ -59,17 +59,44 @@ void BleInterface::OnTick() {
 	//TODO 	midiPacketGenerator.flush();
 	//TODO }
 
-	//if (elapsed > continousStatusFps) {
-	//	send pedal values
-	//}
-	//static int i = 0;
-	//if (++i % 200 == 0) {
-	//	blecfg::midiPacketSend = { 0x80, 0x80, 0x90, 0x3c, 0x7f };
-	//	bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
-	//} else if (i % 200 == 1) {
-	//	blecfg::midiPacketSend = { 0x80, 0x80, 0x80, 0x3c, 0x00 };
-	//	bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
-	//}
+	//TODO config
+	static constexpr const std::array<bool, 2> isContinuousPedal = { true, true };
+	static constexpr const double continuousPedalThreshold = 0.2;
+	static constexpr const double discretePedalThreshold = 0.2;
+
+	static int64_t lastContinuousStatus = 0;
+
+	auto now = esp_timer_get_time();
+	// TODO reset all controllers c = 121, v = x
+	// TODO all notes off c = 123, v = 0
+	// TODO auto compensation in form of waitTilNextStatus = (2 * aim) - (elapsed since last)
+	if (now - lastContinuousStatus > 100000) {
+		std::array<uint8_t, 2> pedalValues = {};
+		Sensor::ForEachPedal([&](Sensor pedal) {
+			const auto& state = Application::instance->GetSensorManager().GetLogicStates()[pedal];
+			auto& value = pedalValues[pedal.GetPedalIndex()];
+
+			if (isContinuousPedal[pedal.GetPedalIndex()]) {
+				if (state.pos <= continuousPedalThreshold) {
+					value = 0x00;
+				} else {
+					auto pos = (state.pos - continuousPedalThreshold) / (1.0 - continuousPedalThreshold);
+					value = (pos >= 1.0) ? 0x7f : static_cast<uint8_t>(pos * 0x80);
+				}
+			} else {
+				value = (state.pos < discretePedalThreshold) ? 0x00 : 0x7f;
+			}
+		});
+
+		// TODO b0 = control change
+		blecfg::midiPacketSend = { 0x80, 0x80, 0xb0
+			, 0x43 /* soft   */, pedalValues[0]
+			, 0x40 /* damper */, pedalValues[1]
+			};
+
+		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
+		lastContinuousStatus = now;
+	}
 }
 
 void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor) {

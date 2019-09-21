@@ -34,12 +34,10 @@ public:
 	void CalculateNextSensorState(SensorData& newData);
 
 private:
-	inline static constexpr const size_t singleSensorHistorySize = 8 * 4096u;
-
 	// XXX Not particularily good style, but necessary to save precious space.
 	union {
 		SensorLogicStateData logicStates{};
-		std::array<uint16_t, singleSensorHistorySize> singleSensorHistory;
+		std::array<uint16_t, config::singleSensorHistorySize> singleSensorHistory;
 	};
 
 	AdcController adcController{};

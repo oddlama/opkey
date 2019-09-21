@@ -25,26 +25,26 @@ public:
 		w = 0;
 	}
 
-	void Set(uint8_t r, uint8_t g, uint8_t b) {
+	void SetRgb(uint8_t r, uint8_t g, uint8_t b) {
 		this->r = r;
 		this->g = g;
 		this->b = b;
 	}
 
-	void Set(uint8_t r, uint8_t g, uint8_t b, uint8_t w) {
+	void SetRgbw(uint8_t r, uint8_t g, uint8_t b, uint8_t w) {
 		this->r = r;
 		this->g = g;
 		this->b = b;
 		this->w = w;
 	}
 
-	void Set(double r, double g, double b) {
+	void SetRgb(double r, double g, double b) {
 		this->r = Convert(r);
 		this->g = Convert(g);
 		this->b = Convert(b);
 	}
 
-	void Set(double r, double g, double b, double w) {
+	void SetRgbw(double r, double g, double b, double w) {
 		this->r = Convert(r);
 		this->g = Convert(g);
 		this->b = Convert(b);
