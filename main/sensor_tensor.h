@@ -61,15 +61,25 @@ struct LogicState {
 	// Last known time this key/pedal was released
 	int64_t lastReleaseTime = 0;
 
-	// Time of key rising above posLowThreshold
-	int64_t lowRisingEdgeTime = 0;
-	// Key position at low rising edge
-	double lowRisingEdgePos = 0.0;
+	// TODO away
+	double avgTimeStep = 0.0;
+	int64_t lastUpdate = 0;
 
-	// Time of key rising above posControlThreshold
-	int64_t controlRisingEdgeTime = 0;
-	// Key position at control rising edge
-	double controlRisingEdgePos = 0.0;
+	//TODO rename all more descriptive
+	int64_t lastAdjust = 0;
+	int64_t minTime = 0;
+	double minPos = 0.0;
+	int64_t maxTime = 0;
+	double maxPos = 0.0;
+	//// Time of key rising above posLowThreshold
+	//int64_t lowRisingEdgeTime = 0;
+	//// Key position at low rising edge
+	//double lowRisingEdgePos = 0.0;
+
+	//// Time of key rising above posControlThreshold
+	//int64_t controlRisingEdgeTime = 0;
+	//// Key position at control rising edge
+	//double controlRisingEdgePos = 0.0;
 };
 
 using SensorLogicStateData = SensorTensor<LogicState>;

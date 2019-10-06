@@ -126,6 +126,7 @@ void Visualizer::TaskMain() {
 				});
 
 				// Pedals use the in-between leds
+				// TODO
 				PixelRgbw pedalLed{};
 				double softPedal = logicStates[Sensor::pedalOffset + 0].pos;
 				if (softPedal < .1) { softPedal = 0; }

@@ -31,7 +31,7 @@ public:
 
 	void InitLogicStates(SensorData& newData);
 	void InitSingleSensorHistory();
-	void CalculateNextSensorState(SensorData& newData);
+	void CalculateNextSensorState(Sensor sensor, double data);
 
 private:
 	// XXX Not particularily good style, but necessary to save precious space.

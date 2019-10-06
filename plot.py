@@ -217,6 +217,12 @@ class Capture:
         # General information
         self.count = len(self.rawSensorData)
         self.tStep = (self.meta.getElapsedNsMcu() / 1000000000) / self.count
+        if self.tStep < 4000:
+            frac = int(0.004 / self.tStep)
+            self.tStep *= frac
+            self.rawSensorData = [self.rawSensorData[i] for i in range(0, self.count, frac)]
+            self.count = len(self.rawSensorData)
+
         self.tStepInv = self.count / (self.meta.getElapsedNsMcu() / 1000000000)
 
         # Calculate pos and vel
@@ -269,10 +275,24 @@ class Capture:
             yaxis=plotAxisVel,
         ))
         if includeRaw:
+            global aat
+            aat = .0
+            def accumTen(i):
+                global aat
+                aat = aat * .9 + i * .1
+                #aat = aat * .999 + i * .001
+                return aat
+            tendency = [accumTen(i) for i in self.rawVel]
             fig.add_trace(go.Scattergl(
                 name='{} raw vel'.format(self.getIdentifier()),
                 x=self.t,
                 y=self.rawVel,
+                yaxis=plotAxisVelRaw,
+            ))
+            fig.add_trace(go.Scattergl(
+                name='{} vel tendency'.format(self.getIdentifier()),
+                x=self.t,
+                y=tendency,
                 yaxis=plotAxisVelRaw,
             ))
 

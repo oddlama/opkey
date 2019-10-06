@@ -45,6 +45,13 @@ public:
 		}
 
 		for (int a = 0; a < config::numAdcs; ++a) {
+			auto busGuard = adcs[a].AcquireBus();
+			for (int c = 0; c < config::numChannels; ++c) {
+				adcs[a].TransferPolling(continueOperationTransactions[a * config::numChannels + c]);
+			}
+		}
+
+		for (int a = 0; a < config::numAdcs; ++a) {
 			for (int c = 0; c < config::numChannels; ++c) {
 				auto& rx = (*continueOperationRxs)[a * config::numChannels + c];
 				callback(a * config::numChannels + rx.GetChannel(), rx.GetValue());
