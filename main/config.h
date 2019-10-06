@@ -69,23 +69,24 @@ inline constexpr const int numAdcs = 6;
 inline constexpr const size_t numChannels = 15;
 inline constexpr const size_t defaultMultisamples = 64;
 
-/** Returns the sensor index for a given raw sensor index */
-inline constexpr size_t GetSensorSwizzle(size_t rawIndex) {
+/** Returns the raw index for a given sensor index */
+inline constexpr size_t GetRawIndexFromSensorIndex(size_t sensorIndex) {
 	// Default correction:
-	//    raw 0-87 = Key 87-0
-	//    raw 88-89 = Pedal 0-1
-	if (rawIndex < 88) {
-		return 87 - rawIndex;
+	//    Key   87-0 = raw  0-87
+	//    Pedal  0-1 = raw 88-89
+	if (sensorIndex < 88) {
+		return 87 - sensorIndex;
 	} else {
-		return rawIndex;
+		return sensorIndex;
 	}
 }
 
-/** Returns the raw index for a given sensor */
-inline constexpr size_t GetSensorSwizzleReverse(size_t sensorIndex) {
-	// Currently the function is reversible
-	return GetSensorSwizzle(sensorIndex);
+/** Returns the sensor index for a given raw index */
+inline constexpr size_t GetSensorIndexFromRawIndex(size_t rawIndex) {
+	// Function is reversible
+	return GetRawIndexFromSensorIndex(rawIndex);
 }
+
 
 // ================================================================
 // Calibration Config

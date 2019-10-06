@@ -84,6 +84,33 @@ public:
 		}
 	}
 
+	inline void PollingStart(uint8_t* rxData, size_t rxLen, uint8_t* txData, size_t txLen) {
+		spi_transaction_t transaction{};
+		transaction.flags     = 0;
+		transaction.length    = txLen * 8;
+		transaction.rxlength  = rxLen * 8;
+		transaction.tx_buffer = txData;
+		transaction.rx_buffer = rxData;
+
+		PollingStart(transaction);
+	}
+
+	inline void PollingStart(spi_transaction_t& transaction) {
+		assert(handle != nullptr);
+
+		if (auto error = spi_device_polling_start(handle, &transaction, portMAX_DELAY); error != ESP_OK) {
+			esp::loge("spi_device_polling_start(SpiDevice{{name='{}'}}) returned {}", name, error);
+		}
+	}
+
+	inline void PollingEnd() {
+		assert(handle != nullptr);
+
+		if (auto error = spi_device_polling_end(handle, portMAX_DELAY); error != ESP_OK) {
+			esp::loge("spi_device_polling_end(SpiDevice{{name='{}'}}) returned {}", name, error);
+		}
+	}
+
 	[[nodiscard]] AcquireGuard AcquireBus() {
 		return AcquireGuard{*this};
 	}

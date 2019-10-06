@@ -110,7 +110,7 @@ void AdcController::SetAdcModeSingle() {
 	setModeAuto1.inputRange = ads7953::InputRange::Full;
 
 	// Disable reading all channels except the configured one
-	int sChannel = config::GetSensorSwizzleReverse(mode_params::singleSensorMonitoringSensor.GetIndex()) % config::numChannels;
+	int sChannel = config::GetRawIndexFromSensorIndex(mode_params::singleSensorMonitoringSensor.GetIndex()) % config::numChannels;
 	auto programModeAuto1 = ads7953::ProgramModeAuto1{};
 	programModeAuto1.channelMask = 1 << sChannel;
 
@@ -150,28 +150,6 @@ void AdcController::SetAdcModeSingle() {
 				throw OpKeyException("ADC mode set error: '{}' returned invalid data"_format(adc.GetName()));
 			}
 		}
-	}
-}
-
-
-void AdcController::Read(RawSensorData& data) {
-	OPKEY_PROFILE_FUNCTION();
-
-	Read([&](auto i, auto val) {
-			data[i] = val;
-		});
-}
-
-void AdcController::Read(SensorData& data, uint32_t samples) {
-	OPKEY_PROFILE_FUNCTION();
-
-	data = SensorData{};
-	auto Accumulate = [&](auto i, auto val) {
-			data[i] += double(val) / (samples * ads7953::values);
-		};
-
-	for (int s = 0; s < samples; ++s) {
-		Read(Accumulate);
 	}
 }
 

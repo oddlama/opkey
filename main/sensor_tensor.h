@@ -46,8 +46,14 @@ using SensorData = SensorTensor<double>;
  * history of sensor data
  */
 struct LogicState {
+	// Time of last update
+	int64_t lastUpdateTime = 0;
 	// Current position
 	double pos = 0.0;
+	// Exponential moving average of position = EMA(pos)
+	double posEma = 0.0;
+	// Current velocity
+	double vel = 0.0;
 
 	// Key/Pedal state has changed regarding to the last known state
 	bool changed = false;
@@ -61,16 +67,11 @@ struct LogicState {
 	// Last known time this key/pedal was released
 	int64_t lastReleaseTime = 0;
 
-	// TODO away
-	double avgTimeStep = 0.0;
-	int64_t lastUpdate = 0;
-
 	//TODO rename all more descriptive
-	int64_t lastAdjust = 0;
-	int64_t minTime = 0;
-	double minPos = 0.0;
-	int64_t maxTime = 0;
-	double maxPos = 0.0;
+	int64_t maxVelTime = 0.0;
+	double maxVel = 0.0;
+	double maxVelPos = 0.0;
+	double maxVelPosEma = 0.0;
 	//// Time of key rising above posLowThreshold
 	//int64_t lowRisingEdgeTime = 0;
 	//// Key position at low rising edge

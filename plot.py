@@ -227,9 +227,9 @@ class Capture:
 
         # Calculate pos and vel
         self.rawPos = self.rawSensorData
-        self.rawVel = np.diff(self.rawPos) * self.tStepInv
-        self.smoothPos = signal.savgol_filter(self.rawPos, 153, 3)
-        self.smoothVel = signal.savgol_filter(self.rawVel, 153, 3)
+        self.rawVel = np.insert(np.diff(self.rawPos) * self.tStepInv, 0, 0)
+        #self.smoothPos = signal.savgol_filter(self.rawPos, 153, 3)
+        #self.smoothVel = signal.savgol_filter(self.rawVel, 153, 3)
 
         # Calculate time shift
         self.indexT0 = np.where(self.rawVel == np.amax(self.rawVel))[0][0]
@@ -247,12 +247,12 @@ class Capture:
             (self.audioFs, self.audioData) = (None, None)
 
     def plotPos(self, fig):
-        fig.add_trace(go.Scattergl(
-            name='{} pos'.format(self.getIdentifier()),
-            x=self.t,
-            y=self.smoothPos,
-            yaxis=plotAxisPos,
-        ))
+        #fig.add_trace(go.Scattergl(
+        #    name='{} pos'.format(self.getIdentifier()),
+        #    x=self.t,
+        #    y=self.smoothPos,
+        #    yaxis=plotAxisPos,
+        #))
         if includeRaw:
             fig.add_trace(go.Scattergl(
                 name='{} raw pos'.format(self.getIdentifier()),
@@ -262,18 +262,18 @@ class Capture:
             ))
 
     def plotVel(self, fig):
-        fig.add_trace(go.Scattergl(
-            name='{} vel'.format(self.getIdentifier()),
-            x=self.t,
-            y=self.smoothVel,
-            yaxis=plotAxisVel,
-        ))
-        fig.add_trace(go.Scattergl(
-            name='{} t0 vel'.format(self.getIdentifier()),
-            x=self.t,
-            y=self.t0Vel,
-            yaxis=plotAxisVel,
-        ))
+        #fig.add_trace(go.Scattergl(
+        #    name='{} vel'.format(self.getIdentifier()),
+        #    x=self.t,
+        #    y=self.smoothVel,
+        #    yaxis=plotAxisVel,
+        #))
+        #fig.add_trace(go.Scattergl(
+        #    name='{} t0 vel'.format(self.getIdentifier()),
+        #    x=self.t,
+        #    y=self.t0Vel,
+        #    yaxis=plotAxisVel,
+        #))
         if includeRaw:
             global aat
             aat = .0
@@ -282,7 +282,7 @@ class Capture:
                 aat = aat * .9 + i * .1
                 #aat = aat * .999 + i * .001
                 return aat
-            tendency = [accumTen(i) for i in self.rawVel]
+            tendency = [accumTen(i) for i in self.rawPos]
             fig.add_trace(go.Scattergl(
                 name='{} raw vel'.format(self.getIdentifier()),
                 x=self.t,
@@ -290,10 +290,10 @@ class Capture:
                 yaxis=plotAxisVelRaw,
             ))
             fig.add_trace(go.Scattergl(
-                name='{} vel tendency'.format(self.getIdentifier()),
+                name='{} pos tendency'.format(self.getIdentifier()),
                 x=self.t,
                 y=tendency,
-                yaxis=plotAxisVelRaw,
+                yaxis=plotAxisPosRaw,
             ))
 
     def plotAudio(self, fig):

@@ -35,62 +35,93 @@ void SensorManager::InitSingleSensorHistory() {
 void SensorManager::CalculateNextSensorState(SensorData& newData) {
 	OPKEY_PROFILE_FUNCTION();
 
-	auto now = esp_timer_get_time();
-
 	for (size_t i = 0; i < newData.size(); ++i) {
-		auto& state = logicStates[i];
+		CalculateNextSensorState(i, newData[i]);
+	}
+}
 
-		// 1. Swizzle the raw data to match the sensor order
-		// 2. Position is sqrt(data), because light intensity is 1/(distance^2)
-		auto rawPos = sqrt(newData[config::GetSensorSwizzle(i)]);
-		// 3. Apply calibration
-		auto prevPos = state.pos;
-		state.pos = calibration::calibrationData[i].Apply(rawPos);
+void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
+	OPKEY_PROFILE_FUNCTION();
 
+	auto sensor = Sensor{config::GetSensorIndexFromRawIndex(rawIndex)};
+	auto& state = logicStates[sensor];
 
+	auto now = esp_timer_get_time();
+	auto deltaTime = now - state.lastUpdateTime;
+	state.lastUpdateTime = now;
 
-		constexpr auto keyReleaseTravel = 0.15;
+	constexpr auto releaseThresholdPosFactor = 0.2;
+	/**
+	 * Maximum time in microseconds between max velocity and trigger events
+	 * which still causes a trigger
+	 */
+	constexpr auto maxTriggerTimeUs = 20000;
 
-		// TODO away
-		state.avgTimeStep = (state.avgTimeStep * .99) + (static_cast<double>(now - state.lastUpdate) * .01);
-		state.lastUpdate = now;
+	constexpr auto thresholdMinVelocity = 4.0;
+	constexpr auto thresholdTriggerVelocity = 3.0;
+	constexpr auto triggerThresholdPosEmaDiff = 0.2;
+	/** alpha factor for exponential moving average of pos. */
+	constexpr auto posEmaAlpha = 0.1;
 
-		state.changed = false;
-		if (state.pressed) {
-			if ((state.maxPos - state.pos) > keyReleaseTravel) {
-				// The key was pressed and the position has travelled
-				// backwards enough to consider the key released.
-				state.pressed = false;
-				state.changed = true;
-				state.lastReleaseTime = now;
+	// Store previous values
+	auto prevPos = state.pos;
+	auto prevVel = state.vel;
 
-				state.lastAdjust = now;
-				state.minPos = state.pos;
-				state.minTime = now;
-				state.maxPos = state.pos;
-				state.maxTime = now;
+	// 1. Position is sqrt(data), because light intensity is 1/(distance^2)
+	// 2. Apply calibration
+	auto rawPos = sqrt(newData);
+	state.pos = calibration::calibrationData[sensor].Apply(rawPos);
+	state.vel = (state.pos - prevPos) * (1000000.0 / deltaTime);
+	// Calculate exponetial moving average (EMA) of pos
+	state.posEma = state.posEma * (1.0 - posEmaAlpha) + state.pos * posEmaAlpha;
+
+	if (state.pressed) {
+		if (state.maxVelPos - state.pos > releaseThresholdPosFactor * state.maxVelPos) {
+			// The key was pressed and since then it has travelled up for
+			// more than releaseThresholdPosFactor (percentage) of the hit position.
+			state.pressed = false;
+			state.changed = true;
+			state.lastReleaseTime = now;
+
+			// Reset trigger variables
+			state.maxVel = 0.0;
+			state.maxVelTime = 0;
+			state.maxVelPos = 0.0;
+			state.maxVelPosEma = 0.0;
+		}
+	} else {
+		// Check rising edge on velocity over thresholdMinVelocity
+		if (prevVel < thresholdMinVelocity && state.vel >= thresholdMinVelocity) {
+			// If the velocity is greater than the current max velocity
+			if (state.vel > state.maxVel) {
+				// Check if the difference between pos and EMA(pos) is greater
+				// than the required threshold (effectively a robust minimum velocity)
+				if (state.pos - state.posEma >= triggerThresholdPosEmaDiff) {
+					state.maxVel = state.vel;
+					state.maxVelTime = now;
+					state.maxVelPos = state.pos;
+					state.maxVelPosEma = state.posEma;
+					fmt::print("[2;37mkey[0x{:02x}, {:4s}] possible: v {:7.2f} d {:7.2f}] vel: {:7.2f}[m\n",
+						sensor.GetIndex(),
+						sensor.GetName(),
+						state.maxVel,
+						state.maxVelPos - state.maxVelPosEma,
+						state.maxVel * (state.maxVelPos - state.maxVelPosEma));
+				}
 			}
-		} else {
-			if (state.pos < state.minPos) {
-				state.lastAdjust = now;
-				state.minPos = state.pos;
-				state.minTime = now;
-				state.maxPos = state.pos;
-				state.maxTime = now;
-			} else if (state.pos > state.maxPos) {
-				state.maxPos = state.pos;
-				state.maxTime = now;
-			}
+		}
 
-			auto Trigger = [&] {
+		// Check falling edge on velocity over thresholdTriggerVelocity
+		if (prevVel > thresholdTriggerVelocity && state.vel <= thresholdTriggerVelocity) {
+			// Check if the trigger is still valid
+			if (now - state.maxVelTime <= maxTriggerTimeUs) {
 				// The position is past the high threshold
-				auto risingEdgeDeltaTime = state.maxTime - state.minTime;
 				state.pressed = true;
 				state.changed = true;
-				state.lastPressTime = state.maxTime;
+				state.lastPressTime = state.maxVelTime;
 
 				// TODO apply velocity curve config::VelocityCurve(...)
-				state.pressVelocity = (state.maxPos - state.minPos) * 1000000.0 / risingEdgeDeltaTime;
+				state.pressVelocity = state.maxVel * (state.maxVelPos - state.maxVelPosEma);
 				auto TODO_RAW_PRESS_VELO = state.pressVelocity;
 
 				if (state.pressVelocity < 20.0) {
@@ -104,146 +135,229 @@ void SensorManager::CalculateNextSensorState(SensorData& newData) {
 					state.pressVelocity = 1.0;
 				}
 
-				fmt::print("avgtime {:8.3f}us, key[0x{:02x}, {:4s}] down [min,max]: [{:7.2f},{:7.2f}@{:6d}] vel: {:7.2f}\n",
-						state.avgTimeStep,
-						Sensor{i}.GetIndex(),
-						Sensor{i}.GetName(),
-						state.minPos,
-						state.maxPos,
-						risingEdgeDeltaTime,
-						TODO_RAW_PRESS_VELO);
-			};
-
-			// TODO 0.1 pos in 100,000us
-			// TODO if pos change < X after 10 ms,
-			// reset min to cur
-			if ((now - state.lastAdjust) > 10000) {
-				if (state.pos - state.minPos < 0.01) {
-					if (state.maxPos - state.minPos > .2) {
-						if (state.maxTime - state.minTime > 40000) {
-							Trigger();
-						}
-					} else {
-						state.lastAdjust = now;
-						state.minPos = state.pos;
-						state.minTime = now;
-						state.maxPos = state.pos;
-						state.maxTime = now;
-					}
-				}
+				fmt::print("key[0x{:02x}, {:4s}] down:     v {:7.2f} d {:7.2f}] vel: {:7.2f}\n",
+					sensor.GetIndex(),
+					sensor.GetName(),
+					state.maxVel,
+					state.maxVelPos - state.maxVelPosEma,
+					TODO_RAW_PRESS_VELO);
+			} else {
+				// The trigger has expired, reset max velocity state
+				state.maxVel = 0.0;
+				state.maxVelTime = 0;
+				state.maxVelPos = 0.0;
+				state.maxVelPosEma = 0.0;
 			}
-
-			// TODO at least 40 ms attack time
-			if (state.maxTime - state.minTime > 40000) {
-				// TODO at least 20% travel for a keystroke
-				if (state.maxPos - state.minPos > .2) {
-					if ((state.maxPos - state.pos) > .15) {
-						Trigger();
-					}
-				}
-			}
-
-			// TODO tendency calculation?
-			// TODO PLOT THIS SHIT
-			//tendency = tendency * .8 + velocity * .2;
 		}
-
-
-		// TODO
-		// if pressed
-		//	 if (lastHigh - pos) > keyEesetTravel
-		//	   lastReleaseTime = ...
-		// else
-		//   if (pos < min)
-		//     min = pos
-		//     minTime = now
-		//   else if (pos > max)
-		//     max = newmax
-		//     maxTime = now
-		//
-		//   if wasGoingDown && lastpos < pos
-		//     local minimum
-		//     -> reset min time
-		//     if (lastMinPos - curMinPos / time  -->  velocity over that time smaller than X)
-		//	      min = pos
-		//	      minTime = now
-		//   else if not wasGoingDown && lastpos > pos
-		//     local maximum
-		//     -> reset max time
-		//
-		//   if max - min > minKeyTravelForPress
-		//     if max - pos < keyBacktravelToTrigger
-		//       if maxtime-mintime > minAttackTime
-		//         trigger now
-
-		//// TODO maximum press time?
-		//// TODO check attack slopes at thresholds to calc hit velocity?
-		//state.changed = false;
-		//if (state.pressed) {
-		//	if (state.pos < config::posLowThreshold) {
-		//		// The key was pressed and the position is now
-		//		// below the low threshold, so it is now released
-		//		state.pressed = false;
-		//		state.changed = true;
-		//		state.lastReleaseTime = now;
-
-		//		// 0 is not used for an invalid state here, but rather to ensure
-		//		// that all calculations with it will yield a high difference to 'now'.
-		//		state.lowRisingEdgeTime = 0;
-		//		state.controlRisingEdgeTime = 0;
-		//	}
-		//} else {
-		//	// TODO state system? else ifs are carrying some intermediate states
-
-		//	// TODO maybe choose a backupControlThreshold, that is ALWAYS hit by any sufficient keypress.
-		//	// if then the high or low thresholds are not met, and if we record local minima and maxima
-		//	// between, then we can calculate a keypress even if it missed the low/high threshold
-
-		//	if (prevPos < config::posLowThreshold &&
-		//			state.pos >= config::posLowThreshold &&
-		//			now - state.lowRisingEdgeTime > config::posThresholdJitterDelayUs) {
-		//		// The position is the first past the low threshold
-		//		state.lowRisingEdgeTime = now;
-		//		state.lowRisingEdgePos = state.pos;
-		//	} else if (state.pos >= config::posControlThreshold &&
-		//			now - state.controlRisingEdgeTime > config::posThresholdJitterDelayUs) {
-		//		// The position is at or past the control threshold
-		//		state.controlRisingEdgeTime = now;
-		//		state.controlRisingEdgePos = state.pos;
-		//	} else if (state.pos >= config::posHighThreshold) {
-		//		// The position is past the high threshold
-		//		auto risingEdgeDeltaTime = now - state.lowRisingEdgeTime;
-		//		state.pressed = true;
-		//		state.changed = true;
-		//		state.lastPressTime = now;
-
-		//		// TODO apply velocity curve config::VelocityCurve(...)
-		//		state.pressVelocity = (state.pos - state.lowRisingEdgePos) * 1000000.0 / risingEdgeDeltaTime;
-		//		auto TODO_RAW_PRESS_VELO = state.pressVelocity;
-
-		//		if (state.pressVelocity < 20.0) {
-		//			state.pressVelocity /= 26.0;
-		//		} else {
-		//			// Compress
-		//			state.pressVelocity = 20.0 / 26.0 + (state.pressVelocity - 20.0) / 50.0;
-		//		}
-
-		//		if (state.pressVelocity > 1.0) {
-		//			state.pressVelocity = 1.0;
-		//		}
-
-		//		fmt::print("key[0x{:02x}, {:4s}] down [l,c,h]: [{:7.2f},{:7.2f}@{:6d},{:7.2f}@{:6d}] vel: {:7.2f}\n",
-		//				Sensor{i}.GetIndex(),
-		//				Sensor{i}.GetName(),
-		//				state.lowRisingEdgePos,
-		//				state.controlRisingEdgePos,
-		//				state.controlRisingEdgeTime - state.lowRisingEdgeTime,
-		//				state.pos,
-		//				now - state.lowRisingEdgeTime,
-		//				TODO_RAW_PRESS_VELO);
-		//	}
-		//}
 	}
+
+
+	//state.changed = false;
+	//if (state.pressed) {
+	//	if ((state.maxPos - state.pos) > keyReleaseTravel) {
+	//		// The key was pressed and the position has travelled
+	//		// backwards enough to consider the key released.
+	//		state.pressed = false;
+	//		state.changed = true;
+	//		state.lastReleaseTime = now;
+
+	//		state.lastAdjust = now;
+	//		state.minPos = state.pos;
+	//		state.minTime = now;
+	//		state.maxPos = state.pos;
+	//		state.maxTime = now;
+	//	}
+	//} else {
+
+	//state.changed = false;
+	//if (state.pressed) {
+	//	if ((state.maxPos - state.pos) > keyReleaseTravel) {
+	//		// The key was pressed and the position has travelled
+	//		// backwards enough to consider the key released.
+	//		state.pressed = false;
+	//		state.changed = true;
+	//		state.lastReleaseTime = now;
+
+	//		state.lastAdjust = now;
+	//		state.minPos = state.pos;
+	//		state.minTime = now;
+	//		state.maxPos = state.pos;
+	//		state.maxTime = now;
+	//	}
+	//} else {
+	//	if (state.pos < state.minPos) {
+	//		state.lastAdjust = now;
+	//		state.minPos = state.pos;
+	//		state.minTime = now;
+	//		state.maxPos = state.pos;
+	//		state.maxTime = now;
+	//	} else if (state.pos > state.maxPos) {
+	//		state.maxPos = state.pos;
+	//		state.maxTime = now;
+	//	}
+
+	//	auto Trigger = [&] {
+	//		// The position is past the high threshold
+	//		auto risingEdgeDeltaTime = state.maxTime - state.minTime;
+	//		state.pressed = true;
+	//		state.changed = true;
+	//		state.lastPressTime = state.maxTime;
+
+	//		// TODO apply velocity curve config::VelocityCurve(...)
+	//		state.pressVelocity = (state.maxPos - state.minPos) * 1000000.0 / risingEdgeDeltaTime;
+	//		auto TODO_RAW_PRESS_VELO = state.pressVelocity;
+
+	//		if (state.pressVelocity < 20.0) {
+	//			state.pressVelocity /= 26.0;
+	//		} else {
+	//			// Compress
+	//			state.pressVelocity = 20.0 / 26.0 + (state.pressVelocity - 20.0) / 50.0;
+	//		}
+
+	//		if (state.pressVelocity > 1.0) {
+	//			state.pressVelocity = 1.0;
+	//		}
+
+	//		fmt::print("avgtime {:8.3f}us, key[0x{:02x}, {:4s}] down [min,max]: [{:7.2f},{:7.2f}@{:6d}] vel: {:7.2f}\n",
+	//				state.avgTimeStep,
+	//				sensor.GetIndex(),
+	//				sensor.GetName(),
+	//				state.minPos,
+	//				state.maxPos,
+	//				risingEdgeDeltaTime,
+	//				TODO_RAW_PRESS_VELO);
+	//	};
+
+	//	// TODO 0.1 pos in 100,000us
+	//	// TODO if pos change < X after 10 ms,
+	//	// reset min to cur
+	//	if ((now - state.lastAdjust) > 10000) {
+	//		if (state.pos - state.minPos < 0.01) {
+	//			if (state.maxPos - state.minPos > .2) {
+	//				if (state.maxTime - state.minTime > 40000) {
+	//					Trigger();
+	//				}
+	//			} else {
+	//				state.lastAdjust = now;
+	//				state.minPos = state.pos;
+	//				state.minTime = now;
+	//				state.maxPos = state.pos;
+	//				state.maxTime = now;
+	//			}
+	//		}
+	//	}
+
+	//	// TODO at least 40 ms attack time
+	//	if (state.maxTime - state.minTime > 40000) {
+	//		// TODO at least 20% travel for a keystroke
+	//		if (state.maxPos - state.minPos > .2) {
+	//			if ((state.maxPos - state.pos) > .15) {
+	//				Trigger();
+	//			}
+	//		}
+	//	}
+
+	//	// TODO tendency calculation?
+	//	// TODO PLOT THIS SHIT
+	//	//tendency = tendency * .8 + velocity * .2;
+	//}
+
+
+	// TODO
+	// if pressed
+	//	 if (lastHigh - pos) > keyEesetTravel
+	//	   lastReleaseTime = ...
+	// else
+	//   if (pos < min)
+	//     min = pos
+	//     minTime = now
+	//   else if (pos > max)
+	//     max = newmax
+	//     maxTime = now
+	//
+	//   if wasGoingDown && lastpos < pos
+	//     local minimum
+	//     -> reset min time
+	//     if (lastMinPos - curMinPos / time  -->  velocity over that time smaller than X)
+	//	      min = pos
+	//	      minTime = now
+	//   else if not wasGoingDown && lastpos > pos
+	//     local maximum
+	//     -> reset max time
+	//
+	//   if max - min > minKeyTravelForPress
+	//     if max - pos < keyBacktravelToTrigger
+	//       if maxtime-mintime > minAttackTime
+	//         trigger now
+
+	//// TODO maximum press time?
+	//// TODO check attack slopes at thresholds to calc hit velocity?
+	//state.changed = false;
+	//if (state.pressed) {
+	//	if (state.pos < config::posLowThreshold) {
+	//		// The key was pressed and the position is now
+	//		// below the low threshold, so it is now released
+	//		state.pressed = false;
+	//		state.changed = true;
+	//		state.lastReleaseTime = now;
+
+	//		// 0 is not used for an invalid state here, but rather to ensure
+	//		// that all calculations with it will yield a high difference to 'now'.
+	//		state.lowRisingEdgeTime = 0;
+	//		state.controlRisingEdgeTime = 0;
+	//	}
+	//} else {
+	//	// TODO state system? else ifs are carrying some intermediate states
+
+	//	// TODO maybe choose a backupControlThreshold, that is ALWAYS hit by any sufficient keypress.
+	//	// if then the high or low thresholds are not met, and if we record local minima and maxima
+	//	// between, then we can calculate a keypress even if it missed the low/high threshold
+
+	//	if (prevPos < config::posLowThreshold &&
+	//			state.pos >= config::posLowThreshold &&
+	//			now - state.lowRisingEdgeTime > config::posThresholdJitterDelayUs) {
+	//		// The position is the first past the low threshold
+	//		state.lowRisingEdgeTime = now;
+	//		state.lowRisingEdgePos = state.pos;
+	//	} else if (state.pos >= config::posControlThreshold &&
+	//			now - state.controlRisingEdgeTime > config::posThresholdJitterDelayUs) {
+	//		// The position is at or past the control threshold
+	//		state.controlRisingEdgeTime = now;
+	//		state.controlRisingEdgePos = state.pos;
+	//	} else if (state.pos >= config::posHighThreshold) {
+	//		// The position is past the high threshold
+	//		auto risingEdgeDeltaTime = now - state.lowRisingEdgeTime;
+	//		state.pressed = true;
+	//		state.changed = true;
+	//		state.lastPressTime = now;
+
+	//		// TODO apply velocity curve config::VelocityCurve(...)
+	//		state.pressVelocity = (state.pos - state.lowRisingEdgePos) * 1000000.0 / risingEdgeDeltaTime;
+	//		auto TODO_RAW_PRESS_VELO = state.pressVelocity;
+
+	//		if (state.pressVelocity < 20.0) {
+	//			state.pressVelocity /= 26.0;
+	//		} else {
+	//			// Compress
+	//			state.pressVelocity = 20.0 / 26.0 + (state.pressVelocity - 20.0) / 50.0;
+	//		}
+
+	//		if (state.pressVelocity > 1.0) {
+	//			state.pressVelocity = 1.0;
+	//		}
+
+	//		fmt::print("avgtime {:8.3f}us, key[0x{:02x}, {:4s}] down [l,c,h]: [{:7.2f},{:7.2f}@{:6d},{:7.2f}@{:6d}] vel: {:7.2f}\n",
+	//				state.avgTimeStep,
+	//				sensor.GetIndex(),
+	//				sensor.GetName(),
+	//				state.lowRisingEdgePos,
+	//				state.controlRisingEdgePos,
+	//				state.controlRisingEdgeTime - state.lowRisingEdgeTime,
+	//				state.pos,
+	//				now - state.lowRisingEdgeTime,
+	//				TODO_RAW_PRESS_VELO);
+	//	}
+	//}
 }
 
 
@@ -303,7 +417,7 @@ void SensorManager::OnTick() {
 
 				// Read data
 				auto now = esp_timer_get_time();
-				adcController.ReadSingle(singleSensorHistory.data(), singleSensorHistory.size());
+				adcController.ReadSingle(singleSensorHistory.data(), singleSensorHistory.size(), 1800);
 				auto fin = esp_timer_get_time();
 
 				// Notify host of finished capture
@@ -329,8 +443,8 @@ void SensorManager::OnTick() {
 
 		case Mode::NormalOperation: {
 			// TODO settings for samples
-			adcController.Read(2, [&](double data, ) {
-					CalculateNextSensorState(data );
+			adcController.Read([&](auto rawIndex, auto data) {
+					CalculateNextSensorState(rawIndex, data);
 				});
 
 			// Notify listeners if a key state has changed

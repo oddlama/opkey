@@ -85,9 +85,9 @@ void Print() {
 
 bool Calibrate(SensorData& newData) {
 	bool allSensorsCalibrated = true;
-	for (size_t i = 0; i < newData.size(); ++i) {
+	for (size_t i = 0; i < calibrationData.size(); ++i) {
 		// Swizzle the raw data to match the sensor order
-		auto val = sqrt(newData[config::GetSensorSwizzle(i)]);
+		auto val = sqrt(newData[config::GetRawIndexFromSensorIndex(i)]);
 		auto& c = calibrationData[i];
 
 		// Update max
