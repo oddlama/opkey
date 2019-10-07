@@ -54,6 +54,11 @@ struct LogicState {
 	double posEma = 0.0;
 	// Current velocity
 	double vel = 0.0;
+	// Exponential moving average of velocity = EMA(vel)
+	double velEma = 0.0;
+
+	int64_t risingVelTime = 0;
+	double risingVelPos = 0.0;
 
 	// Key/Pedal state has changed regarding to the last known state
 	bool changed = false;
@@ -70,6 +75,7 @@ struct LogicState {
 	//TODO rename all more descriptive
 	int64_t maxVelTime = 0.0;
 	double maxVel = 0.0;
+	double maxVelEma = 0.0;
 	double maxVelPos = 0.0;
 	double maxVelPosEma = 0.0;
 	//// Time of key rising above posLowThreshold

@@ -109,19 +109,26 @@ void Visualizer::TaskMain() {
 
 			case Mode::NormalOperation: {
 				//TODO VisualizeNormal();
+				auto sample = Sensor{0x3f};
 				Sensor::ForEachKey([&](Sensor key) {
 					size_t ledIndex = (Sensor::keyCount - 1) - key.GetKeyIndex();
 					auto& pixel = ledStrip[ledIndex * 2];
-					auto& logicState = logicStates[key];
+					//auto& logicState = logicStates[key];
+					auto& logicState = logicStates[sample];
 
-					auto deltaLastRelease = now - logicState.lastReleaseTime;
+					//auto deltaLastRelease = now - logicState.lastReleaseTime;
 					if (logicState.pressed) {
-						pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, logicState.pressVelocity);
-					} else if (deltaLastRelease > 200000) {
-						pixel.Clear();
+						auto ledPosition = double(ledIndex) / Sensor::keyCount;
+						if (ledPosition < logicState.pressVelocity) {
+							pixel.SetHsv(ledPosition, 1.0, 0.05);
+						}
+					//	pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, logicState.pressVelocity);
+					//} else if (deltaLastRelease > 200000) {
+					//	pixel.Clear();
 					} else {
-						double df = 1.0 - (deltaLastRelease / 200000.0);
-						pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, df * logicState.pressVelocity);
+						pixel.Clear();
+					//	double df = 1.0 - (deltaLastRelease / 200000.0);
+					//	pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, df * logicState.pressVelocity);
 					}
 				});
 

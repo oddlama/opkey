@@ -50,18 +50,19 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 	auto deltaTime = now - state.lastUpdateTime;
 	state.lastUpdateTime = now;
 
-	constexpr auto releaseThresholdPosFactor = 0.2;
+	constexpr auto releaseThresholdPosFactor = 0.3;
 	/**
 	 * Maximum time in microseconds between max velocity and trigger events
 	 * which still causes a trigger
 	 */
-	constexpr auto maxTriggerTimeUs = 20000;
+	constexpr auto maxTriggerTimeUs = 40000;
 
-	constexpr auto thresholdMinVelocity = 4.0;
-	constexpr auto thresholdTriggerVelocity = 3.0;
+	constexpr auto thresholdTriggerVelocity = 1.0;
 	constexpr auto triggerThresholdPosEmaDiff = 0.2;
+	constexpr auto triggerThresholdVel = 3.0;
 	/** alpha factor for exponential moving average of pos. */
 	constexpr auto posEmaAlpha = 0.1;
+	constexpr auto velEmaAlpha = 0.1;
 
 	// Store previous values
 	auto prevPos = state.pos;
@@ -72,9 +73,12 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 	auto rawPos = sqrt(newData);
 	state.pos = calibration::calibrationData[sensor].Apply(rawPos);
 	state.vel = (state.pos - prevPos) * (1000000.0 / deltaTime);
-	// Calculate exponetial moving average (EMA) of pos
-	state.posEma = state.posEma * (1.0 - posEmaAlpha) + state.pos * posEmaAlpha;
 
+	// Calculate exponetial moving average (EMA) of pos and vel
+	state.posEma = state.posEma * (1.0 - posEmaAlpha) + state.pos * posEmaAlpha;
+	state.velEma = state.velEma * (1.0 - velEmaAlpha) + state.vel * velEmaAlpha;
+
+	state.changed = false;
 	if (state.pressed) {
 		if (state.maxVelPos - state.pos > releaseThresholdPosFactor * state.maxVelPos) {
 			// The key was pressed and since then it has travelled up for
@@ -88,65 +92,65 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 			state.maxVelTime = 0;
 			state.maxVelPos = 0.0;
 			state.maxVelPosEma = 0.0;
+			state.maxVelEma = 0.0;
 		}
 	} else {
-		// Check rising edge on velocity over thresholdMinVelocity
-		if (prevVel < thresholdMinVelocity && state.vel >= thresholdMinVelocity) {
-			// If the velocity is greater than the current max velocity
-			if (state.vel > state.maxVel) {
-				// Check if the difference between pos and EMA(pos) is greater
-				// than the required threshold (effectively a robust minimum velocity)
-				if (state.pos - state.posEma >= triggerThresholdPosEmaDiff) {
-					state.maxVel = state.vel;
-					state.maxVelTime = now;
-					state.maxVelPos = state.pos;
-					state.maxVelPosEma = state.posEma;
-					fmt::print("[2;37mkey[0x{:02x}, {:4s}] possible: v {:7.2f} d {:7.2f}] vel: {:7.2f}[m\n",
-						sensor.GetIndex(),
-						sensor.GetName(),
-						state.maxVel,
-						state.maxVelPos - state.maxVelPosEma,
-						state.maxVel * (state.maxVelPos - state.maxVelPosEma));
-				}
+		// If the velocity is greater than the current max velocity
+		if (state.vel > state.maxVel) {
+			// Check for a viable velocity maximum
+			if (state.vel >= 10 || (state.pos > .25 && state.vel > 3)) {
+				state.maxVel = state.vel;
+				state.maxVelTime = now;
+				state.maxVelPos = state.pos;
+				state.maxVelPosEma = state.posEma;
+				state.maxVelEma = state.velEma;
 			}
 		}
 
 		// Check falling edge on velocity over thresholdTriggerVelocity
 		if (prevVel > thresholdTriggerVelocity && state.vel <= thresholdTriggerVelocity) {
-			// Check if the trigger is still valid
-			if (now - state.maxVelTime <= maxTriggerTimeUs) {
+			// Check if the trigger is still valid, and prevent triggers
+			// from key-release jittering
+			if (now - state.maxVelTime <= maxTriggerTimeUs && now - state.lastReleaseTime > 15000) {
 				// The position is past the high threshold
 				state.pressed = true;
 				state.changed = true;
 				state.lastPressTime = state.maxVelTime;
 
 				// TODO apply velocity curve config::VelocityCurve(...)
-				state.pressVelocity = state.maxVel * (state.maxVelPos - state.maxVelPosEma);
-				auto TODO_RAW_PRESS_VELO = state.pressVelocity;
-
-				if (state.pressVelocity < 20.0) {
-					state.pressVelocity /= 26.0;
+				state.pressVelocity = state.maxVel - state.maxVelEma;
+				if (state.pressVelocity < 0.0) {
+					state.pressVelocity = 0.0;
+				} else if (state.pressVelocity < 40.0) {
+					// Linear for low and medium velocities
+					state.pressVelocity /= 50.0;
+				} else if (state.pressVelocity < 80.0) {
+					// Compress high velocities
+					state.pressVelocity = 0.8 + (state.pressVelocity - 40.0) / 40.0 * 0.2;
 				} else {
-					// Compress
-					state.pressVelocity = 20.0 / 26.0 + (state.pressVelocity - 20.0) / 50.0;
-				}
-
-				if (state.pressVelocity > 1.0) {
 					state.pressVelocity = 1.0;
 				}
+				//state.pressVelocity = std::clamp(state.pressVelocity, 0.0, 1.0);
 
-				fmt::print("key[0x{:02x}, {:4s}] down:     v {:7.2f} d {:7.2f}] vel: {:7.2f}\n",
-					sensor.GetIndex(),
-					sensor.GetName(),
-					state.maxVel,
-					state.maxVelPos - state.maxVelPosEma,
-					TODO_RAW_PRESS_VELO);
+				//fmt::print("[2;37mkey[0x{:02x}, {:4s}] possible: pos {:7.2f} vel {:7.2f} EMApd{:7.2f} EMAvd {:7.2f}[m\n",
+				//	sensor.GetIndex(),
+				//	sensor.GetName(),
+				//	state.pos,
+				//	state.vel,
+				//	state.maxVelPosEma - state.maxVelPos,
+				//	state.maxVelEma - state.maxVel
+				//	);
+				//fmt::print("key[0x{:02x}, {:4s}] down: vel: {:7.2f}\n",
+				//	sensor.GetIndex(),
+				//	sensor.GetName(),
+				//	state.pressVelocity);
 			} else {
 				// The trigger has expired, reset max velocity state
 				state.maxVel = 0.0;
 				state.maxVelTime = 0;
 				state.maxVelPos = 0.0;
 				state.maxVelPosEma = 0.0;
+				state.maxVelEma = 0.0;
 			}
 		}
 	}

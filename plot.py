@@ -228,6 +228,23 @@ class Capture:
         # Calculate pos and vel
         self.rawPos = self.rawSensorData
         self.rawVel = np.insert(np.diff(self.rawPos) * self.tStepInv, 0, 0)
+        global aat
+        aat = .0
+        def accumTen(i):
+            global aat
+            aat = aat * .9 + i * .1
+            return aat
+        self.emaPos = [accumTen(i) for i in self.rawPos]
+        global bbt
+        bbt = .0
+        def accumTen2(i):
+            global bbt
+            if i < bbt:
+                bbt = bbt * .7 + i * .3
+            else:
+                bbt = bbt * .9 + i * .1
+            return bbt
+        self.emaVel = [accumTen2(i) for i in self.rawVel]
         #self.smoothPos = signal.savgol_filter(self.rawPos, 153, 3)
         #self.smoothVel = signal.savgol_filter(self.rawVel, 153, 3)
 
@@ -275,14 +292,14 @@ class Capture:
         #    yaxis=plotAxisVel,
         #))
         if includeRaw:
-            global aat
-            aat = .0
-            def accumTen(i):
-                global aat
-                aat = aat * .9 + i * .1
-                #aat = aat * .999 + i * .001
-                return aat
-            tendency = [accumTen(i) for i in self.rawPos]
+            #global aat
+            #aat = .0
+            #def accumTen(i):
+            #    global aat
+            #    aat = aat * .9 + i * .1
+            #    #aat = aat * .999 + i * .001
+            #    return aat
+            #tendency = [accumTen(i) for i in self.rawPos]
             fig.add_trace(go.Scattergl(
                 name='{} raw vel'.format(self.getIdentifier()),
                 x=self.t,
@@ -290,10 +307,16 @@ class Capture:
                 yaxis=plotAxisVelRaw,
             ))
             fig.add_trace(go.Scattergl(
-                name='{} pos tendency'.format(self.getIdentifier()),
+                name='{} pos ema'.format(self.getIdentifier()),
                 x=self.t,
-                y=tendency,
+                y=self.emaPos,
                 yaxis=plotAxisPosRaw,
+            ))
+            fig.add_trace(go.Scattergl(
+                name='{} vel ema'.format(self.getIdentifier()),
+                x=self.t,
+                y=self.emaVel,
+                yaxis=plotAxisVelRaw,
             ))
 
     def plotAudio(self, fig):
