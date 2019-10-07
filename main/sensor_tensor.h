@@ -50,15 +50,10 @@ struct LogicState {
 	int64_t lastUpdateTime = 0;
 	// Current position
 	double pos = 0.0;
-	// Exponential moving average of position = EMA(pos)
-	double posEma = 0.0;
 	// Current velocity
 	double vel = 0.0;
 	// Exponential moving average of velocity = EMA(vel)
 	double velEma = 0.0;
-
-	int64_t risingVelTime = 0;
-	double risingVelPos = 0.0;
 
 	// Key/Pedal state has changed regarding to the last known state
 	bool changed = false;
@@ -72,21 +67,14 @@ struct LogicState {
 	// Last known time this key/pedal was released
 	int64_t lastReleaseTime = 0;
 
-	//TODO rename all more descriptive
+	// Time at which the velocity reached a maximum
 	int64_t maxVelTime = 0.0;
+	// The velocity value at its maximum
 	double maxVel = 0.0;
+	// The EMA(vel) at the velocity maximum
 	double maxVelEma = 0.0;
+	// The pos at the velocity maximum
 	double maxVelPos = 0.0;
-	double maxVelPosEma = 0.0;
-	//// Time of key rising above posLowThreshold
-	//int64_t lowRisingEdgeTime = 0;
-	//// Key position at low rising edge
-	//double lowRisingEdgePos = 0.0;
-
-	//// Time of key rising above posControlThreshold
-	//int64_t controlRisingEdgeTime = 0;
-	//// Key position at control rising edge
-	//double controlRisingEdgePos = 0.0;
 };
 
 using SensorLogicStateData = SensorTensor<LogicState>;

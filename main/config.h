@@ -125,7 +125,7 @@ inline constexpr const double calibrationNearBoundaryMinRange = 0.05;
 /**
  * Single sensor history size for single sensor traces
  */
-inline static constexpr const size_t singleSensorHistorySize = 4 * 4096u;
+inline static constexpr const size_t singleSensorHistorySize = 128; //4 * 4096u;
 
 /**
  * Names for the sensors. Max 4 characters!
@@ -143,18 +143,48 @@ inline constexpr const std::array<const char*, 90> sensorNames =
 	, "Soft", "Damp"
 	};
 
-inline constexpr const double posLowThreshold = 0.15;
-inline constexpr const double posControlThreshold = 0.25;
-inline constexpr const double posHighThreshold = 0.32;
+/**
+ * The threshold below which the velocity must fall after
+ * a maximum to trigger a keypress.
+ */
+inline constexpr const double triggerVelocityThreshold = 1.0;
 
 /**
- * The minimum amout of time (in us) that must have passed before any
- * of the thresholds can be triggered again. This is to prevent jitter,
- * noise and other "quick succession" triggers to influence the calculation.
- *
- * For reference: A cycle for a quick staccato-keypress lasts for around 60ms to 120ms.
+ * Maximum amount of time between velocity maximum and the trigger
+ * that still counts as a keypress.
  */
-inline constexpr const int64_t posThresholdJitterDelayUs = 5000;
+inline constexpr const int64_t maxTriggerDelayUs = 40000;
+
+/**
+ * Mimumum amount of time between velocity maximum and the trigger.
+ * This prevents key jitter from becoming keypresses.
+ */
+inline constexpr const int64_t minTriggerJitterDelayUs = 15000;
+
+/**
+ * Checks if a detected velocity maximum is valid and should
+ * be considered a trigger candidate.
+ */
+inline constexpr const auto IsValidVelocityMaximum = [](double pos, double vel) {
+		return vel >= 10.0 || (pos > .25 && vel > 3.0);
+	};
+
+/**
+ * The distance relative to the press position a key has to
+ * travel to be considered released.
+ *
+ * The relative part means, that if the key was pressed fully (1.0),
+ * it needs to travel the given distance to be considered released.
+ * If it was only pressed halfway (0.5), it only needs to travel half
+ * of the given value to be considered released.
+ */
+inline constexpr const double releasePositionThreshold = 0.4;
+
+/**
+ * The alpha factor of the exponential moving average (EMA)
+ * calcuation for the key velocity.
+ */
+inline constexpr const double velocityEmaAlpha = 0.1;
 
 
 } // namespace opkey::config
