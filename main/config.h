@@ -181,6 +181,12 @@ inline constexpr const auto IsValidVelocityMaximum = [](double pos, double vel) 
 inline constexpr const double releasePositionThreshold = 0.4;
 
 /**
+ * Keys with a position smaller than this value are always considered
+ * released.
+ */
+inline constexpr const double releasePositionAbsolute = 0.15;
+
+/**
  * The alpha factor of the exponential moving average (EMA)
  * calcuation for the key velocity.
  */

@@ -68,9 +68,10 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 
 	state.changed = false;
 	if (state.pressed) {
-		if (state.maxVelPos - state.pos > config::releasePositionThreshold * state.maxVelPos) {
+		if (state.pos < config::releasePositionAbsolute || state.maxVelPos - state.pos > config::releasePositionThreshold * state.maxVelPos) {
 			// The key was pressed and since then it has travelled up for
 			// more than config::releasePositionThreshold (percentage) of the hit position.
+			// Or it has fallen below the absolute release position.
 			state.pressed = false;
 			state.changed = true;
 			state.lastReleaseTime = now;

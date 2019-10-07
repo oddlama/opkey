@@ -98,8 +98,8 @@ public:
 		OPKEY_PROFILE_FUNCTION();
 
 		data = SensorData{};
-		auto Accumulate = [&](auto i, auto val) {
-				data[i] += double(val) / (samples * ads7953::values);
+		auto Accumulate = [&](auto i, double val) {
+				data[i] += val / samples;
 			};
 
 		for (int s = 0; s < samples; ++s) {

@@ -99,7 +99,7 @@ void Visualizer::TaskMain() {
 					//}
 
 					if (pedal.GetPedalIndex() == 0) {
-						ledStrip[(Sensor::keyCount * 2) - 2] = pixel;
+						ledStrip[(Sensor::keyCount * 2) - 1] = pixel;
 					} else {
 						ledStrip[1] = pixel;
 					}
@@ -109,26 +109,26 @@ void Visualizer::TaskMain() {
 
 			case Mode::NormalOperation: {
 				//TODO VisualizeNormal();
-				auto sample = Sensor{0x3f};
+				//auto sample = Sensor{0x3f};
 				Sensor::ForEachKey([&](Sensor key) {
 					size_t ledIndex = (Sensor::keyCount - 1) - key.GetKeyIndex();
 					auto& pixel = ledStrip[ledIndex * 2];
-					//auto& logicState = logicStates[key];
-					auto& logicState = logicStates[sample];
+					auto& logicState = logicStates[key];
+					//auto& logicState = logicStates[sample];
 
-					//auto deltaLastRelease = now - logicState.lastReleaseTime;
+					auto deltaLastRelease = now - logicState.lastReleaseTime;
 					if (logicState.pressed) {
-						auto ledPosition = double(ledIndex) / Sensor::keyCount;
-						if (ledPosition < logicState.pressVelocity) {
-							pixel.SetHsv(ledPosition, 1.0, 0.05);
-						}
-					//	pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, logicState.pressVelocity);
-					//} else if (deltaLastRelease > 200000) {
-					//	pixel.Clear();
-					} else {
+					//	auto ledPosition = double(ledIndex) / Sensor::keyCount;
+					//	if (ledPosition < logicState.pressVelocity) {
+					//		pixel.SetHsv(ledPosition, 1.0, 0.05);
+					//	}
+						pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, logicState.pressVelocity);
+					} else if (deltaLastRelease > 200000) {
 						pixel.Clear();
-					//	double df = 1.0 - (deltaLastRelease / 200000.0);
-					//	pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, df * logicState.pressVelocity);
+					} else {
+					//	pixel.Clear();
+						double df = 1.0 - (deltaLastRelease / 200000.0);
+						pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, df * logicState.pressVelocity);
 					}
 				});
 
@@ -139,7 +139,7 @@ void Visualizer::TaskMain() {
 				if (softPedal < .1) { softPedal = 0; }
 				double dampPedal = logicStates[Sensor::pedalOffset + 1].pos;
 				if (dampPedal < .1) { dampPedal = 0; }
-				pedalLed.SetRgb(softPedal * .1, 0.0, dampPedal * .1);
+				pedalLed.SetRgb(softPedal * .1, 0.0, dampPedal * .02);
 				for (int i = 0; i < Sensor::keyCount - 1; ++i) {
 					ledStrip[1 + i * 2] = pedalLed;
 				}
