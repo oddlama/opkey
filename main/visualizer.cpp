@@ -36,6 +36,11 @@ Visualizer::~Visualizer() noexcept {
 
 void Visualizer::TaskMain() {
 	Mode lastMode = Mode::Idle;
+
+	constexpr const auto statusReportDelay = 10000000;
+	int64_t lastStatusReportTime = esp_timer_get_time();
+	int totalUpdates = 0;
+
 	while (true) {
 		//do {
 			//std::scoped_lock lock{spinlock};
@@ -108,41 +113,82 @@ void Visualizer::TaskMain() {
 			}
 
 			case Mode::NormalOperation: {
+				auto& softPedalState = logicStates[Sensor::softPedal];
+				auto& dampPedalState = logicStates[Sensor::dampPedal];
+
+				// TODO as config variable
+				constexpr const auto damperPedalPassiveDecayHalfLifeTime = 300000.0;
+				constexpr const auto damperPedalPassiveDecayThreshold = 0.2;
+
 				//TODO VisualizeNormal();
-				//auto sample = Sensor{0x3f};
 				Sensor::ForEachKey([&](Sensor key) {
 					size_t ledIndex = (Sensor::keyCount - 1) - key.GetKeyIndex();
 					auto& pixel = ledStrip[ledIndex * 2];
-					auto& logicState = logicStates[key];
-					//auto& logicState = logicStates[sample];
+					auto& state = logicStates[key];
 
-					auto deltaLastRelease = now - logicState.lastReleaseTime;
-					if (logicState.pressed) {
-					//	auto ledPosition = double(ledIndex) / Sensor::keyCount;
-					//	if (ledPosition < logicState.pressVelocity) {
-					//		pixel.SetHsv(ledPosition, 1.0, 0.05);
-					//	}
-						pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, logicState.pressVelocity);
-					} else if (deltaLastRelease > 200000) {
-						pixel.Clear();
+					if (state.pressed) {
+						PixelRgbw targetColor{};
+						targetColor.SetHsv(((9.0 - (4.0 * softPedalState.pos)) / 16.0) + (5.0 / 16.0) * state.pressVelocity, 1.0, state.pressVelocity);
+						pixel.SetLerp(targetColor, 0.5);
+					} else if (dampPedalState.pressed &&
+							dampPedalState.lastPressTime < state.lastReleaseTime) {
+						auto timeSinceKeyrelease = now - state.lastReleaseTime;
+						double decay = (1.0 + damperPedalPassiveDecayThreshold) *
+							(damperPedalPassiveDecayHalfLifeTime / (damperPedalPassiveDecayHalfLifeTime + timeSinceKeyrelease))
+							- damperPedalPassiveDecayThreshold;
+						if (decay < 0.0) {
+							decay = 0.0;
+						}
+						// TODO currently this allows to brighten again when pedal is pressed again.
+						// better make a persistent decayed state, which tracks global decay
+						// TODO also only calculate press color once, else soft pedal can switch colors
+						// live...
+						if (dampPedalState.pos < 0.6) {
+							decay *= dampPedalState.pos / 0.6;
+						}
+
+						PixelRgbw targetColor{};
+						targetColor.SetHsv(((9.0 - (4.0 * softPedalState.pos)) / 16.0) + (5.0 / 16.0) * state.pressVelocity, 1.0, decay * state.pressVelocity);
+						pixel.SetLerp(targetColor, 0.5);
 					} else {
-					//	pixel.Clear();
-						double df = 1.0 - (deltaLastRelease / 200000.0);
-						pixel.SetHsv(1/8. + logicState.pressVelocity * 5/8., 1.0, df * logicState.pressVelocity);
+						PixelRgbw targetColor{};
+						pixel.SetLerp(targetColor, 0.1);
 					}
+
+					//if (state.pressed) {
+					//	PixelOn(pixel, state);
+					//} else if (dampPedalState.lastPressTime < state.lastPressTime &&
+					//		state.lastPressTime < dampPedalState.lastReleaseTime) {
+					//	if (dampPedalState.pressed) {
+					//		PixelOn(pixel, state);
+					//	} else if (deltaDampRelease < 200000) {
+					//		PixelLerp(pixel, state, 1.0 - deltaDampRelease / 200000.0);
+					//	} else {
+					//		pixel.Clear();
+					//	}
+					//} else if (deltaLastRelease < 200000) {
+					//	PixelLerp(pixel, state, 1.0 - deltaLastRelease / 200000.0);
+					//} else {
+					//	pixel.Clear();
+					//}
 				});
 
-				// Pedals use the in-between leds
-				// TODO
-				PixelRgbw pedalLed{};
-				double softPedal = logicStates[Sensor::pedalOffset + 0].pos;
-				if (softPedal < .1) { softPedal = 0; }
-				double dampPedal = logicStates[Sensor::pedalOffset + 1].pos;
-				if (dampPedal < .1) { dampPedal = 0; }
-				pedalLed.SetRgb(softPedal * .1, 0.0, dampPedal * .02);
-				for (int i = 0; i < Sensor::keyCount - 1; ++i) {
-					ledStrip[1 + i * 2] = pedalLed;
-				}
+				//auto sample = Sensor{0x3f};
+					//auto& state = logicStates[sample];
+					//	auto ledPosition = double(ledIndex) / Sensor::keyCount;
+					//	if (ledPosition < state.pressVelocity) {
+					//		pixel.SetHsv(ledPosition, 1.0, 0.05);
+					//	}
+
+				//// Pedals use the ambient "unused" LEDs in-between keys
+				//// TODO
+				//PixelRgbw pedalLed{};
+				//if (softPedal < .1) { softPedal = 0; }
+				//if (dampPedal < .1) { dampPedal = 0; }
+				//pedalLed.SetRgb(softPedal * .1, 0.0, dampPedal * .02);
+				//for (int i = 0; i < Sensor::keyCount - 1; ++i) {
+				//	ledStrip[1 + i * 2] = pedalLed;
+				//}
 				break;
 			}
 
@@ -151,31 +197,40 @@ void Visualizer::TaskMain() {
 		}
 
 		ledStrip.Update();
-#ifndef NDEBUG
-		++debugLedFpsCount;
-#endif
 		// } while (false);
 
 		lastMode = curMode;
+
+		auto updateBeginTime = now;
+		now = esp_timer_get_time();
+
+		auto updateElapsed = now - updateBeginTime;
+		auto remainingTimeToWait = config::targetUpdateTimeUs - updateElapsed;
+		++totalUpdates;
+
 		taskYIELD();
-		// TODO wait only what is remaining X - now + begin to get X fps, with X being a config variable for vis fps
-		vTaskDelay(10 / portTICK_PERIOD_MS);
+		if (remainingTimeToWait < 0) {
+			// Could not keep up with target fps
+			//esp::logw("Could not keep up with target fps!");
+		} else if (remainingTimeToWait > 1000) {
+			vTaskDelay((remainingTimeToWait + 500) / (1000 * portTICK_PERIOD_MS));
+		}
+
+		auto deltaLastStatusReport = now - lastStatusReportTime;
+		if (deltaLastStatusReport > statusReportDelay) {
+			esp::logi("visualizer: {:5.1f} / {:5.1f} fps (actual/target)"
+				, totalUpdates * 1000000.0 / deltaLastStatusReport
+				, config::targetFps
+				);
+			lastStatusReportTime = esp_timer_get_time();
+			totalUpdates = 0;
+		}
 	}
 }
 
 void Visualizer::OnTick() {
 	OPKEY_PROFILE_FUNCTION();
 	logicStates = sensorManager.GetLogicStates();
-
-#ifndef NDEBUG
-	int64_t now = esp_timer_get_time();
-	auto diff = now - debugLedFpsTime;
-	if (diff > 1000000) {
-		fmt::print("Visualizer fps: {}\n", debugLedFpsCount * 1000000.0 / diff);
-		debugLedFpsTime = now;
-		debugLedFpsCount = 0;
-	}
-#endif
 }
 
 void Visualizer::OnModeChange(Mode /*oldMode*/, Mode /*newMode*/) {
@@ -188,12 +243,12 @@ void Visualizer::OnSensorStateChange(const SensorManager& sensorManager, Sensor 
 	}
 
 	//auto& h0 = sensorManager.GetHistory()[0];
-	//auto& logicState = h0.logicState[sensor];
+	//auto& state = h0.state[sensor];
 
 	////std::scoped_lock lock{spinlock};
 
 	//size_t ledIndex = (Sensor::keyCount - 1) - sensor.GetKeyIndex();
-	//if (logicState.pressed) {
+	//if (state.pressed) {
 	//	ledStrip[ledIndex] = { 0, 20, 30, 10 };
 	//} else {
 	//	// TODO ledStrip[ledIndex] = { };

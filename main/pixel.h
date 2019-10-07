@@ -60,6 +60,14 @@ public:
 		this->w = Convert(w);
 	}
 
+	void SetLerp(const PixelRgbw& other, double alpha) {
+		double beta = 1.0 - alpha;
+		this->r = static_cast<uint8_t>(this->r * beta + other.r * alpha);
+		this->g = static_cast<uint8_t>(this->g * beta + other.g * alpha);
+		this->b = static_cast<uint8_t>(this->b * beta + other.b * alpha);
+		this->w = static_cast<uint8_t>(this->w * beta + other.w * alpha);
+	}
+
 public:
 	uint8_t g = 0;
 	uint8_t r = 0;

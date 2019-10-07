@@ -66,79 +66,103 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 	// Calculate exponetial moving average (EMA) of pos and vel
 	state.velEma = state.velEma * (1.0 - velEmaAlpha) + state.vel * velEmaAlpha;
 
-	state.changed = false;
-	if (state.pressed) {
-		if (state.pos < config::releasePositionAbsolute || state.maxVelPos - state.pos > config::releasePositionThreshold * state.maxVelPos) {
-			// The key was pressed and since then it has travelled up for
-			// more than config::releasePositionThreshold (percentage) of the hit position.
-			// Or it has fallen below the absolute release position.
-			state.pressed = false;
-			state.changed = true;
-			state.lastReleaseTime = now;
-
-			// Reset trigger variables
-			state.maxVelTime = 0;
-			state.maxVel = 0.0;
-			state.maxVelEma = 0.0;
-			state.maxVelPos = 0.0;
-		}
-	} else {
-		// If the velocity is greater than the current max velocity
-		if (state.vel > state.maxVel) {
-			// Check for a valid velocity maximum
-			if (config::IsValidVelocityMaximum(state.pos, state.vel)) {
-				state.maxVelTime = now;
-				state.maxVel = state.vel;
-				state.maxVelEma = state.velEma;
-				state.maxVelPos = state.pos;
+	if (sensor.IsPedal()) {
+		state.changed = false;
+		if (state.pressed) {
+			if (state.pos < config::pedalReleaseThreshold) {
+				state.changed = true;
+				state.pressed = false;
+				state.lastReleaseTime = now;
+			}
+		} else {
+			if (state.pos >= config::pedalPressThreshold) {
+				state.changed = true;
+				state.pressed = true;
+				state.lastPressTime = now;
 			}
 		}
-
-		// Check falling edge on velocity over config::triggerVelocityThreshold
-		if (prevVel > config::triggerVelocityThreshold &&
-				state.vel <= config::triggerVelocityThreshold) {
-			// Check if the trigger is still valid, and prevent triggers
-			// from key-release jittering
-			if (now - state.maxVelTime <= config::maxTriggerDelayUs &&
-					now - state.lastReleaseTime > config::minTriggerJitterDelayUs) {
-				// The position is past the high threshold
-				state.pressed = true;
+	} else {
+		state.changed = false;
+		if (state.pressed) {
+			if (state.pos < config::releasePositionAbsolute || state.maxVelPos - state.pos > config::releasePositionThreshold * state.maxVelPos) {
+				// The key was pressed and since then it has travelled up for
+				// more than config::releasePositionThreshold (percentage) of the hit position.
+				// Or it has fallen below the absolute release position.
+				state.pressed = false;
 				state.changed = true;
-				state.lastPressTime = state.maxVelTime;
+				state.lastReleaseTime = now;
 
-				// TODO apply velocity curve config::VelocityCurve(...)
-				state.pressVelocity = state.maxVel - state.maxVelEma;
-				if (state.pressVelocity < 0.0) {
-					state.pressVelocity = 0.0;
-				} else if (state.pressVelocity < 40.0) {
-					// Linear for low and medium velocities
-					state.pressVelocity /= 50.0;
-				} else if (state.pressVelocity < 80.0) {
-					// Compress high velocities
-					state.pressVelocity = 0.8 + (state.pressVelocity - 40.0) / 40.0 * 0.2;
-				} else {
-					state.pressVelocity = 1.0;
-				}
-				//state.pressVelocity = std::clamp(state.pressVelocity, 0.0, 1.0);
-
-				//fmt::print("[2;37mkey[0x{:02x}, {:4s}] possible: pos {:7.2f} vel {:7.2f} EMApd{:7.2f} EMAvd {:7.2f}[m\n",
-				//	sensor.GetIndex(),
-				//	sensor.GetName(),
-				//	state.pos,
-				//	state.vel,
-				//	state.maxVelPosEma - state.maxVelPos,
-				//	state.maxVelEma - state.maxVel
-				//	);
-				//fmt::print("key[0x{:02x}, {:4s}] down: vel: {:7.2f}\n",
-				//	sensor.GetIndex(),
-				//	sensor.GetName(),
-				//	state.pressVelocity);
-			} else {
-				// The trigger has expired, reset max velocity state
+				// Reset trigger variables
 				state.maxVelTime = 0;
 				state.maxVel = 0.0;
 				state.maxVelEma = 0.0;
 				state.maxVelPos = 0.0;
+			}
+		} else {
+			// If the velocity is greater than the current max velocity
+			if (state.vel > state.maxVel) {
+				// Check for a valid velocity maximum
+				if (config::IsValidVelocityMaximum(state.pos, state.vel)) {
+					state.maxVelTime = now;
+					state.maxVel = state.vel;
+					state.maxVelEma = state.velEma;
+					state.maxVelPos = state.pos;
+				}
+			}
+
+			// Check falling edge on velocity over config::triggerVelocityThreshold
+			if (prevVel > config::triggerVelocityThreshold &&
+					state.vel <= config::triggerVelocityThreshold) {
+				// Check if the trigger is still valid, and prevent triggers
+				// from key-release jittering
+				if (now - state.maxVelTime <= config::maxTriggerDelayUs &&
+						now - state.lastReleaseTime > config::minTriggerJitterDelayUs) {
+					// The position is past the high threshold
+					state.pressed = true;
+					state.changed = true;
+					state.lastPressTime = state.maxVelTime;
+
+					// TODO as config parameters
+					constexpr const auto linearMaxVelocity = 50.0;
+					constexpr const auto linearRange = 0.75;
+					constexpr const auto compressedMaxVelocity = 110.0;
+
+					// TODO apply velocity curve config::VelocityCurve(...)
+					state.pressVelocity = state.maxVel - state.maxVelEma;
+					if (state.pressVelocity < 0.0) {
+						state.pressVelocity = 0.0;
+					} else if (state.pressVelocity < linearMaxVelocity) {
+						// Linear for low and medium velocities
+						state.pressVelocity = linearRange * state.pressVelocity / linearMaxVelocity;
+					} else if (state.pressVelocity < compressedMaxVelocity) {
+						// Compress high velocities
+						state.pressVelocity = linearRange +
+							(1.0 - linearRange) * (state.pressVelocity - linearMaxVelocity)
+								/ (compressedMaxVelocity - linearMaxVelocity);
+					} else {
+						state.pressVelocity = 1.0;
+					}
+					//state.pressVelocity = std::clamp(state.pressVelocity, 0.0, 1.0);
+
+					//fmt::print("[2;37mkey[0x{:02x}, {:4s}] possible: pos {:7.2f} vel {:7.2f} EMApd{:7.2f} EMAvd {:7.2f}[m\n",
+					//	sensor.GetIndex(),
+					//	sensor.GetName(),
+					//	state.pos,
+					//	state.vel,
+					//	state.maxVelPosEma - state.maxVelPos,
+					//	state.maxVelEma - state.maxVel
+					//	);
+					//fmt::print("key[0x{:02x}, {:4s}] down: vel: {:7.2f}\n",
+					//	sensor.GetIndex(),
+					//	sensor.GetName(),
+					//	state.pressVelocity);
+				} else {
+					// The trigger has expired, reset max velocity state
+					state.maxVelTime = 0;
+					state.maxVel = 0.0;
+					state.maxVelEma = 0.0;
+					state.maxVelPos = 0.0;
+				}
 			}
 		}
 	}

@@ -186,11 +186,32 @@ inline constexpr const double releasePositionThreshold = 0.4;
  */
 inline constexpr const double releasePositionAbsolute = 0.15;
 
+/** Maximum position to consider a pedal released */
+inline constexpr const double pedalReleaseThreshold = 0.1;
+
+/** Minimum position to consider a pedal pressed */
+inline constexpr const double pedalPressThreshold = 0.2;
+
 /**
  * The alpha factor of the exponential moving average (EMA)
  * calcuation for the key velocity.
  */
 inline constexpr const double velocityEmaAlpha = 0.1;
+
+
+// ================================================================
+// Visualizer Config
+// ================================================================
+
+/**
+ * The target fps for the visualizer.
+ */
+inline constexpr const double targetFps = 100.0;
+
+/**
+ * The target update time for the visualizer in microseconds.
+ */
+inline constexpr const int64_t targetUpdateTimeUs = static_cast<int64_t>(1000000.0 / targetFps);
 
 
 } // namespace opkey::config

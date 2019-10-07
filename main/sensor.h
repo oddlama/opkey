@@ -15,6 +15,9 @@ public:
 	inline constexpr static const uint16_t pedalCount = 2;
 	inline constexpr static const uint16_t totalCount = keyCount + pedalCount;
 
+	inline constexpr static const uint16_t softPedal = pedalOffset + 0;
+	inline constexpr static const uint16_t dampPedal = pedalOffset + 1;
+
 public:
 	Sensor() = default;
 
