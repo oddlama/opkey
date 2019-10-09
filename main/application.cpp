@@ -5,6 +5,7 @@
 #include "packet.h"
 
 #include <esp_timer.h>
+#include <esp_task_wdt.h>
 
 
 namespace opkey {
@@ -47,7 +48,8 @@ namespace opkey {
 
 void Application::StartTask() {
 	xTaskHandle taskHandle = nullptr;
-	xTaskCreatePinnedToCore(&TaskMain, "OpKey", 0x10000, nullptr, tskIDLE_PRIORITY + 1, &taskHandle, opkey::config::MainCore);
+	xTaskCreatePinnedToCore(&TaskMain, "OpKey", 0x10000, nullptr, tskIDLE_PRIORITY + 10, &taskHandle, opkey::config::MainCore);
+	esp_task_wdt_delete(taskHandle);
 }
 
 

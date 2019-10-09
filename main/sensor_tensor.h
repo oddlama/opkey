@@ -48,6 +48,8 @@ using SensorData = SensorTensor<double>;
 struct LogicState {
 	// Time of last update
 	int64_t lastUpdateTime = 0;
+	uint16_t delta = 0;
+	uint16_t rawPos = 0;
 	// Current position
 	double pos = 0.0;
 	// Current velocity

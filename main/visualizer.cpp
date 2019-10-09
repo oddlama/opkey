@@ -218,10 +218,10 @@ void Visualizer::TaskMain() {
 
 		auto deltaLastStatusReport = now - lastStatusReportTime;
 		if (deltaLastStatusReport > statusReportDelay) {
-			esp::logi("visualizer: {:5.1f} / {:5.1f} fps (actual/target)"
-				, totalUpdates * 1000000.0 / deltaLastStatusReport
-				, config::targetFps
-				);
+			//esp::logi("visualizer: {:5.1f} / {:5.1f} fps (actual/target)"
+			//	, totalUpdates * 1000000.0 / deltaLastStatusReport
+			//	, config::targetFps
+			//	);
 			lastStatusReportTime = esp_timer_get_time();
 			totalUpdates = 0;
 		}

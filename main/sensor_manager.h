@@ -35,11 +35,8 @@ public:
 	void CalculateNextSensorState(size_t rawIndex, double newData);
 
 private:
-	// XXX Not particularily good style, but necessary to save precious space.
-	union {
-		SensorLogicStateData logicStates{};
-		std::array<uint16_t, config::singleSensorHistorySize> singleSensorHistory;
-	};
+	SensorLogicStateData logicStates{};
+	std::array<uint16_t, config::singleSensorHistorySize> singleSensorHistory;
 
 	AdcController adcController{};
 

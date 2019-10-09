@@ -8,6 +8,28 @@
 namespace opkey {
 
 
+			auto WriteEnc = [](const auto* data, size_t count) {
+				static std::array<uint16_t, 32> sendBuf{};
+				static size_t sendBufCount = 0;
+
+				sendBufCount = 0;
+				auto begin = reinterpret_cast<const uint8_t*>(data);
+				auto end = begin + count;
+				for (auto d = begin; d != end; ++d) {
+					sendBuf[sendBufCount] =
+						((((*d & 0x0f) >> 0) + 'a') << 0) |
+						((((*d & 0xf0) >> 4) + 'a') << 8);
+					if (++sendBufCount == sendBuf.size()) {
+						write(1, sendBuf.data(), sizeof(uint16_t) * sendBuf.size());
+						sendBufCount = 0;
+					}
+				}
+
+				if (sendBufCount > 0) {
+					write(1, sendBuf.data(), sizeof(uint16_t) * sendBufCount);
+				}
+			};
+
 static SensorData tmpData{};
 
 
@@ -49,6 +71,9 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 	auto now = esp_timer_get_time();
 	auto deltaTime = now - state.lastUpdateTime;
 	state.lastUpdateTime = now;
+	//TODO remove
+	state.delta = deltaTime;
+	state.rawPos = static_cast<uint16_t>(newData * ads7953::values);
 
 	/** Alpha factor for exponential moving average of vel. */
 	constexpr auto velEmaAlpha = 0.1;
@@ -185,67 +210,96 @@ void SensorManager::OnTick() {
 		}
 
 		case Mode::SingleSensorMonitoring: {
+			adcController.Read([&](auto rawIndex, auto data) {
+					CalculateNextSensorState(rawIndex, data);
+				});
+
+			static int slot = 0;
+
+			singleSensorHistory[slot * 2 + 0] = logicStates[mode_params::singleSensorMonitoringSensor].delta;
+			singleSensorHistory[slot * 2 + 1] = logicStates[mode_params::singleSensorMonitoringSensor].rawPos;
+
+			if (++slot == config::singleSensorHistorySize / 2) {
+				// Notify host of beginning transaction
+				write(1, "\027\027\027\027\027\027\027\027", 8);
+				uint32_t dataPoints = singleSensorHistory.size() / 2;
+				WriteEnc(&dataPoints, sizeof(dataPoints));
+				WriteEnc(&singleSensorHistory, sizeof(singleSensorHistory));
+				slot = 0;
+
+				fflush(stdin);
+				fflush(stdout);
+
+				auto now = esp_timer_get_time();
+				fmt::print("recording in 1 sec...\n");
+				write(1, "\005\005\005\005\005\005\005\005", 8);
+				while (esp_timer_get_time() - now < 1000000) {
+					; // wait
+				}
+				fmt::print("recording\n");
+			}
+
 			// TODO debug disable bt: nimble_port_stop();
 			// TODO debug disable bt: nimble_port_deinit();
 			// TODO debug disable bt: esp_nimble_hci_and_controller_deinit();
-			while (true) {
+			//while (true) {
 				// esp32 uart safe data conversion
-				auto WriteEnc = [](const auto* data, size_t count) {
-					static std::array<uint16_t, 32> sendBuf{};
-					static size_t sendBufCount = 0;
+				//auto WriteEnc = [](const auto* data, size_t count) {
+				//	static std::array<uint16_t, 32> sendBuf{};
+				//	static size_t sendBufCount = 0;
 
-					sendBufCount = 0;
-					auto begin = reinterpret_cast<const uint8_t*>(data);
-					auto end = begin + count;
-					for (auto d = begin; d != end; ++d) {
-						sendBuf[sendBufCount] =
-							((((*d & 0x0f) >> 0) + 'a') << 0) |
-							((((*d & 0xf0) >> 4) + 'a') << 8);
-						if (++sendBufCount == sendBuf.size()) {
-							write(1, sendBuf.data(), sizeof(uint16_t) * sendBuf.size());
-							sendBufCount = 0;
-						}
-					}
+				//	sendBufCount = 0;
+				//	auto begin = reinterpret_cast<const uint8_t*>(data);
+				//	auto end = begin + count;
+				//	for (auto d = begin; d != end; ++d) {
+				//		sendBuf[sendBufCount] =
+				//			((((*d & 0x0f) >> 0) + 'a') << 0) |
+				//			((((*d & 0xf0) >> 4) + 'a') << 8);
+				//		if (++sendBufCount == sendBuf.size()) {
+				//			write(1, sendBuf.data(), sizeof(uint16_t) * sendBuf.size());
+				//			sendBufCount = 0;
+				//		}
+				//	}
 
-					if (sendBufCount > 0) {
-						write(1, sendBuf.data(), sizeof(uint16_t) * sendBufCount);
-					}
-				};
+				//	if (sendBufCount > 0) {
+				//		write(1, sendBuf.data(), sizeof(uint16_t) * sendBufCount);
+				//	}
+				//};
 
-				// Countdown
-				fmt::print("3...\n");
-				vTaskDelay(1000 / portTICK_PERIOD_MS);
-				fmt::print("2...\n");
-				vTaskDelay(1000 / portTICK_PERIOD_MS);
-				// Notify host of pending capture
-				write(1, "\005\005\005\005\005\005\005\005", 8);
-				fmt::print("1...\n");
-				vTaskDelay(1000 / portTICK_PERIOD_MS);
-				fmt::print("NOW!\n");
+				//// Countdown
+				//fmt::print("3...\n");
+				//vTaskDelay(1000 / portTICK_PERIOD_MS);
+				//fmt::print("2...\n");
+				//vTaskDelay(1000 / portTICK_PERIOD_MS);
+				//// Notify host of pending capture
+				//write(1, "\005\005\005\005\005\005\005\005", 8);
+				//fmt::print("1...\n");
+				//vTaskDelay(1000 / portTICK_PERIOD_MS);
+				//fmt::print("NOW!\n");
 
-				// Read data
-				auto now = esp_timer_get_time();
-				adcController.ReadSingle(singleSensorHistory.data(), singleSensorHistory.size(), 1800);
-				auto fin = esp_timer_get_time();
+				//// Read data
+				//auto now = esp_timer_get_time();
+				//adcController.ReadSingle(singleSensorHistory.data(), singleSensorHistory.size(), 1800);
+				//auto fin = esp_timer_get_time();
 
-				// Notify host of finished capture
-				write(1, "\004\004\004\004\004\004\004\004", 8);
-				auto diff = fin - now;
+				//// Notify host of finished capture
+				//write(1, "\004\004\004\004\004\004\004\004", 8);
+				//auto diff = fin - now;
 
-				// Notify host of beginning transaction
-				write(1, "\027\027\027\027\027\027\027\027", 8);
+				//// Notify host of beginning transaction
+				//write(1, "\027\027\027\027\027\027\027\027", 8);
 
-				std::array<char, 4> sensorName{};
-				memcpy(sensorName.data(), mode_params::singleSensorMonitoringSensor.GetName(), strlen(mode_params::singleSensorMonitoringSensor.GetName()));
-				WriteEnc(sensorName.data(), sensorName.size());
+				//std::array<char, 4> sensorName{};
+				//memcpy(sensorName.data(), mode_params::singleSensorMonitoringSensor.GetName(), strlen(mode_params::singleSensorMonitoringSensor.GetName()));
+				//WriteEnc(sensorName.data(), sensorName.size());
 
-				WriteEnc(&calibration::calibrationData[mode_params::singleSensorMonitoringSensor].min, sizeof(double));
-				WriteEnc(&calibration::calibrationData[mode_params::singleSensorMonitoringSensor].max, sizeof(double));
-				WriteEnc(&diff, sizeof(diff));
-				uint32_t dataPoints = singleSensorHistory.size();
-				WriteEnc(&dataPoints, sizeof(dataPoints));
-				WriteEnc(&singleSensorHistory, sizeof(singleSensorHistory));
-			}
+				//WriteEnc(&calibration::calibrationData[mode_params::singleSensorMonitoringSensor].min, sizeof(double));
+				//WriteEnc(&calibration::calibrationData[mode_params::singleSensorMonitoringSensor].max, sizeof(double));
+				//WriteEnc(&diff, sizeof(diff));
+				//uint32_t dataPoints = singleSensorHistory.size();
+				//WriteEnc(&dataPoints, sizeof(dataPoints));
+				//WriteEnc(&singleSensorHistory, sizeof(singleSensorHistory));
+			//}
 			break;
 		}
 
@@ -281,10 +335,27 @@ void SensorManager::OnModeChange(Mode oldMode, Mode newMode) {
 			calibration::Load();
 			break;
 
-		case Mode::SingleSensorMonitoring:
-			adcController.SetAdcModeSingle();
-			InitSingleSensorHistory();
-			break;
+		case Mode::SingleSensorMonitoring: {
+			//adcController.SetAdcModeSingle();
+			//InitSingleSensorHistory();
+			write(1, "\004\004\004\004\004\004\004\004", 8);
+			std::array<char, 4> sensorName{};
+			memcpy(sensorName.data(), mode_params::singleSensorMonitoringSensor.GetName(), strlen(mode_params::singleSensorMonitoringSensor.GetName()));
+			WriteEnc(sensorName.data(), sensorName.size());
+			WriteEnc(&calibration::calibrationData[mode_params::singleSensorMonitoringSensor].min, sizeof(double));
+			WriteEnc(&calibration::calibrationData[mode_params::singleSensorMonitoringSensor].max, sizeof(double));
+
+			fflush(stdin);
+			fflush(stdout);
+
+			auto now = esp_timer_get_time();
+			fmt::print("recording in 1 sec...\n");
+			write(1, "\005\005\005\005\005\005\005\005", 8);
+			while (esp_timer_get_time() - now < 1000000) {
+				; // wait
+			}
+			fmt::print("recording\n");
+			break;                          }
 
 		default: {
 			adcController.SetAdcModeAuto();

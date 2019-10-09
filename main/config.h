@@ -125,7 +125,7 @@ inline constexpr const double calibrationNearBoundaryMinRange = 0.05;
 /**
  * Single sensor history size for single sensor traces
  */
-inline static constexpr const size_t singleSensorHistorySize = 128; //4 * 4096u;
+inline static constexpr const size_t singleSensorHistorySize = 7 * 4096u;
 
 /**
  * Names for the sensors. Max 4 characters!
