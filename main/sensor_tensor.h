@@ -70,7 +70,7 @@ struct LogicState {
 	int64_t lastReleaseTime = 0;
 
 	// Time at which the velocity reached a maximum
-	int64_t maxVelTime = 0.0;
+	int64_t maxVelTime = 0;
 	// The velocity value at its maximum
 	double maxVel = 0.0;
 	// The EMA(vel) at the velocity maximum

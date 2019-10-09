@@ -12,9 +12,92 @@ import scipy
 import scipy.io.wavfile
 from scipy import signal
 
+triggerVelocityThreshold = 1.0
+maxTriggerDelayUs = 40000
+minTriggerJitterDelayUs = 15000
+releasePositionThreshold = 0.4
+releasePositionAbsolute = 0.15
+pedalReleaseThreshold = 0.1
+pedalPressThreshold = 0.2
+velocityEmaAlpha = 0.1
+
+def IsValidVelocityMaximum(pos, vel):
+    return (vel >= 10.0) or ((pos > .25) and (vel > 3.0))
+
+class LogicState:
+    def __init__(self):
+        self.lastUpdateTime = 0
+        self.pos = 0.0
+        self.vel = 0.0
+        self.velEma = 0.0
+
+        self.changed = False
+        self.pressed = False
+
+        self.lastPressTime = 0
+        self.pressVelocity = 0.0
+        self.lastReleaseTime = 0
+
+        self.maxVelTime = 0
+        self.maxVel = 0.0
+        self.maxVelEma = 0.0
+        self.maxVelPos = 0.0
+
+    def nextState(self, now, deltaTime, newData):
+        velEmaAlpha = 0.1
+
+        prevPos = self.pos
+        prevVel = self.vel
+        self.pos = newData
+        self.vel = (self.pos - prevPos) * (1000000.0 / deltaTime)
+        self.velEma = self.velEma * (1.0 - velEmaAlpha) + self.vel * velEmaAlpha
+
+        self.changed = False
+        if self.pressed:
+            if (self.pos < releasePositionAbsolute) or ((self.maxVelPos - self.pos) > releasePositionThreshold * self.maxVelPos):
+                self.pressed = False
+                self.changed = True
+                self.lastReleaseTime = now
+
+                self.maxVelTime = 0
+                self.maxVel = 0.0
+                self.maxVelEma = 0.0
+                self.maxVelPos = 0.0
+        else:
+            if self.vel > self.maxVel:
+                if IsValidVelocityMaximum(self.pos, self.vel):
+                    self.maxVelTime = now
+                    self.maxVel = self.vel
+                    self.maxVelEma = self.velEma
+                    self.maxVelPos = self.pos
+
+            if (prevVel > triggerVelocityThreshold) and (self.vel <= triggerVelocityThreshold):
+                if ((now - self.maxVelTime) <= maxTriggerDelayUs) and (now - self.lastReleaseTime > minTriggerJitterDelayUs):
+                    self.pressed = True
+                    self.changed = True
+                    self.lastPressTime = self.maxVelTime
+
+                    linearMaxVelocity = 50.0
+                    linearRange = 0.75
+                    compressedMaxVelocity = 110.0
+
+                    self.pressVelocity = self.maxVel - self.maxVelEma
+                    if self.pressVelocity < 0.0:
+                        self.pressVelocity = 0.0
+                    elif self.pressVelocity < linearMaxVelocity:
+                        self.pressVelocity = linearRange * self.pressVelocity / linearMaxVelocity
+                    elif self.pressVelocity < compressedMaxVelocity:
+                        self.pressVelocity = linearRange + (1.0 - linearRange) * (self.pressVelocity - linearMaxVelocity) / (compressedMaxVelocity - linearMaxVelocity)
+                    else:
+                        self.pressVelocity = 1.0
+                else:
+                    self.maxVelTime = 0
+                    self.maxVel = 0.0
+                    self.maxVelEma = 0.0
+                    self.maxVelPos = 0.0
+
 # Config
 includeRaw=True
-combinedFilename="combined.html"
 
 # Constants (DONT CHANGE!)
 plotAxisPos = "y"
@@ -22,6 +105,7 @@ plotAxisPosRaw = "y3"
 plotAxisVel = "y2"
 plotAxisVelRaw = "y4"
 plotAxisWav = "y5"
+plotAxisTriggers = plotAxisPosRaw
 
 maxKeyFreqDeviation = 0.05
 keyFrequencies = {
@@ -219,6 +303,8 @@ class Capture:
 
         c.count = 0
         c.t = []
+        c.tTriggers = []
+        c.yTriggers = []
         c.rawPos = []
         c.rawVel = []
         c.wavT = []
@@ -226,6 +312,8 @@ class Capture:
         for capture in captures:
             c.count += capture.count
             c.t.extend(capture.t)
+            c.tTriggers.extend(capture.tTriggers)
+            c.yTriggers.extend(capture.yTriggers)
             c.rawPos.extend(capture.rawPos)
             c.rawVel.extend(capture.rawVel)
             c.wavT.extend(capture.wavT)
@@ -254,6 +342,19 @@ class Capture:
         self.rawTime = self.csv['time'].values
         self.rawDt = self.csv['dt'].values
         self.rawSensorData = self.csv['value'].values
+
+        self.tTriggers = []
+        self.yTriggers = []
+        logicState = LogicState()
+        for i in range(len(self.rawDt)):
+            logicState.nextState(self.rawTime[i], self.rawDt[i], self.rawSensorData[i])
+            if logicState.changed:
+                if logicState.pressed:
+                    self.tTriggers += [self.rawTime[i]]
+                    self.yTriggers += [1]
+                else:
+                    self.tTriggers += [self.rawTime[i]]
+                    self.yTriggers += [0]
 
         # General information
         self.count = len(self.rawSensorData)
@@ -305,7 +406,6 @@ class Capture:
 
         wavFile = self.getWavFile()
         (self.audioFs, self.audioData) = scipy.io.wavfile.read(wavFile)
-        print(self.audioData.shape)
         if self.audioData.shape[1] == 2:
             self.audioData = self.audioData[:,0]
         if self.audioData.dtype == np.int16:
@@ -424,6 +524,15 @@ class Capture:
             y=self.wavY,
             yaxis=plotAxisWav,
         ))
+
+    def plotTriggers(self, fig):
+        print("plotting triggers...")
+        fig.add_trace(go.Scattergl(
+            name='{} wav'.format(ccap.getIdentifier()),
+            x=self.tTriggers,
+            y=self.yTriggers,
+            yaxis=plotAxisTriggers,
+        ))
     #    if self.audioData is None:
     #        return
 
@@ -460,6 +569,7 @@ class Capture:
         self.plotPos(fig)
         self.plotVel(fig)
         self.plotAudio(fig)
+        self.plotTriggers(fig)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
