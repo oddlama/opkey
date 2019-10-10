@@ -524,7 +524,7 @@ class Capture:
     def plotAudio(self, fig):
         print("plotting audio...")
         fig.add_trace(go.Scattergl(
-            name='{} wav'.format(ccap.getIdentifier()),
+            name='{} wav'.format(self.getIdentifier()),
             x=self.wavT,
             y=self.wavY,
             yaxis=plotAxisWav,
@@ -533,7 +533,7 @@ class Capture:
     def plotTriggers(self, fig):
         print("plotting triggers...")
         fig.add_trace(go.Scattergl(
-            name='{} triggers'.format(ccap.getIdentifier()),
+            name='{} triggers'.format(self.getIdentifier()),
             x=self.tTriggers,
             y=self.yTriggers,
             yaxis=plotAxisTriggers,
