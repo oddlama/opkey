@@ -20,8 +20,8 @@
 #define TRANSACTION_BEGIN_CHAR   '\027'
 #define TRANSACTION_BEGIN_COUNT  8
 
-#define CMD_PRE_RECORD   "./pre-record.sh"
-#define CMD_POST_RECEIVE "./post-receive.sh"
+#define CMD_PRE_RECORD   "./pre_record.sh"
+#define CMD_POST_RECEIVE "./post_receive.sh"
 
 #define DEVICE       "/dev/ttyUSB0"
 

@@ -343,19 +343,6 @@ class Capture:
         self.rawDt = self.csv['dt'].values
         self.rawSensorData = self.csv['value'].values
 
-        self.tTriggers = []
-        self.yTriggers = []
-        logicState = LogicState()
-        for i in range(len(self.rawDt)):
-            logicState.nextState(self.rawTime[i], self.rawDt[i], self.rawSensorData[i])
-            if logicState.changed:
-                if logicState.pressed:
-                    self.tTriggers += [self.rawTime[i]]
-                    self.yTriggers += [1]
-                else:
-                    self.tTriggers += [self.rawTime[i]]
-                    self.yTriggers += [0]
-
         # General information
         self.count = len(self.rawSensorData)
         #self.tStep = (self.meta.getElapsedNsMcu() / 1000000000) / self.count
@@ -372,6 +359,24 @@ class Capture:
         self.t = [self.meta.getOverallOffsetSec() + i / 1000000 for i in self.rawTime]
         self.rawPos = self.rawSensorData
         self.rawVel = [0] + [(self.rawPos[i + 1] - self.rawPos[i]) * (1000000.0 / self.rawDt[i + 1]) for i in range(len(self.rawPos) - 1)]
+
+        # Detect triggers
+        self.triggers = []
+        self.tTriggers = []
+        self.yTriggers = []
+        logicState = LogicState()
+        lastPressed = self.t[0]
+        for i in range(len(self.rawDt)):
+            logicState.nextState(self.rawTime[i], self.rawDt[i], self.rawSensorData[i])
+            if logicState.changed:
+                if logicState.pressed:
+                    lastPressed = self.t[i]
+                    self.tTriggers += [self.t[i] - 0.0000001, self.t[i]]
+                    self.yTriggers += [0, logicState.pressVelocity]
+                else:
+                    self.triggers += [(lastPressed, self.t[i])]
+                    self.tTriggers += [self.t[i] - 0.0000001, self.t[i]]
+                    self.yTriggers += [logicState.pressVelocity, 0]
 
         ### Calculate pos and vel
         ##self.rawPos = self.rawSensorData
@@ -528,7 +533,7 @@ class Capture:
     def plotTriggers(self, fig):
         print("plotting triggers...")
         fig.add_trace(go.Scattergl(
-            name='{} wav'.format(ccap.getIdentifier()),
+            name='{} triggers'.format(ccap.getIdentifier()),
             x=self.tTriggers,
             y=self.yTriggers,
             yaxis=plotAxisTriggers,
@@ -570,30 +575,3 @@ class Capture:
         self.plotVel(fig)
         self.plotAudio(fig)
         self.plotTriggers(fig)
-
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("usage: plot.py <directory|file.raw>")
-        sys.exit(1)
-
-    (path, fileBasenames) = getInputFiles(sys.argv[1])
-
-    captures = []
-    for file in fileBasenames:
-        try:
-            print("reading {}".format(file))
-            captures.append(Capture.fromFile(path, file))
-        except IOError as e:
-            print("Error while loading Capture:")
-            print(e)
-            continue
-
-    print("combining...")
-    ccap = Capture.fromCaptures(captures)
-    fig = go.Figure()
-    ccap.plot(fig)
-    print("layouting...")
-    setFigureLayout(fig)
-    print("plotting...")
-    plotly.offline.plot(fig, filename=ccap.getPlotHtmlFile(), auto_open=True)
-    print("done")

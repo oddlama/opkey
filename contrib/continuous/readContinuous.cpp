@@ -20,8 +20,8 @@
 #define TRANSACTION_BEGIN_CHAR   '\027'
 #define TRANSACTION_BEGIN_COUNT  8
 
-#define CMD_PRE_RECORD   "./contrec.sh"
-#define CMD_POST_RECORD   "./killcontrec.sh"
+#define CMD_PRE_RECORD   "./arecord.sh"
+#define CMD_POST_RECORD   "./kill_arecord.sh"
 //#define CMD_POST_RECEIVE "./post-receive.sh"
 
 #define DEVICE       "/dev/ttyUSB0"
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
 				namespace ch = std::chrono;
 				++countSame;
 				if (countSame == TRANSACTION_BEGIN_COUNT && c == TRANSACTION_BEGIN_CHAR) {
-					system((std::string(CMD_POST_RECORD)));
+					system((std::string(CMD_POST_RECORD)).data());
 					meta.recordEnd = ch::steady_clock::now();
 					newTransaction = true;
 				} else if (countSame == PRE_RECORD_TAG_COUNT && c == PRE_RECORD_TAG_CHAR) {
