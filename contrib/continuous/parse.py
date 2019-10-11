@@ -185,7 +185,7 @@ def setFigureLayout(fig):
     fig.update_traces(mode='lines')
     fig.update_layout(
         xaxis=dict(
-            title="Time (ms)",
+            title="Time (s)",
             domain=[.04,.92] if includeRaw else [0.0, 1.0],
             ),
         yaxis=dict(
@@ -309,6 +309,12 @@ class Capture:
         c.rawVel = []
         c.wavT = []
         c.wavY = []
+        c.wavHullT = []
+        c.wavHullYh = []
+        c.wavHullYl = []
+        c.wavHullYd = []
+        c.wavHullTtrigg = []
+        c.wavHullYtrigg = []
         for capture in captures:
             c.count += capture.count
             c.t.extend(capture.t)
@@ -318,6 +324,12 @@ class Capture:
             c.rawVel.extend(capture.rawVel)
             c.wavT.extend(capture.wavT)
             c.wavY.extend(capture.wavY)
+            c.wavHullT.extend(capture.wavHullT)
+            c.wavHullYh.extend(capture.wavHullYh)
+            c.wavHullYl.extend(capture.wavHullYl)
+            c.wavHullYd.extend(capture.wavHullYd)
+            c.wavHullTtrigg.extend(capture.wavHullTtrigg)
+            c.wavHullYtrigg.extend(capture.wavHullYtrigg)
         return c
 
     def __getRawFile(self):
@@ -417,14 +429,18 @@ class Capture:
             self.audioData = self.audioData / (2**(16-1))
         elif self.audioData.dtype == np.int32:
             self.audioData = self.audioData / (2**(32-1))
+        self.audioDuration = len(self.audioData) / self.audioFs
 
         lowcut = keyFrequencies[self.sensorName] * (1.0 - maxKeyFreqDeviation)
         highcut = keyFrequencies[self.sensorName] * (1.0 + maxKeyFreqDeviation)
         #print("lowcut {}, highcut {}".format(lowcut, highcut))
 
         #self.audioData = butter_bandpass_filter(self.audioData, lowcut, highcut, self.audioFs)
+        self.audioData = self.audioData[::28]
+        self.audioFs = int(self.audioFs / 28)
+        self.audioData = butter_bandpass_filter(self.audioData, lowcut, highcut, self.audioFs)
 
-        recordOffset = 0.953
+        recordOffset = 0.953 + 0.045 - 0.025
         #displayRange = (self.t[0], ccap.t[-1])
         #readRange = (recordOffset, recordOffset + (displayRange[1] - displayRange[0]))
 
@@ -433,15 +449,21 @@ class Capture:
 
         #self.wavT = np.linspace(displayRange[0], displayRange[1], num=(last - first))
 
-        self.wavY = np.array(self.audioData)
-        self.audioDuration = len(self.wavY) / self.audioFs
+        self.wavY = self.audioData
+        #self.wavY = butter_bandpass_filter(self.audioData, lowcut, highcut, self.audioFs)
+        #self.wavY = np.array(self.audioData)
         self.wavOffset = self.meta.getOverallOffsetSec() - recordOffset
         self.wavT = np.linspace(self.wavOffset, self.wavOffset + self.audioDuration, num=len(self.wavY))
 
-        maskedWavY = np.ma.masked_where(np.abs(self.wavY) < .001, self.wavY)
-        maskedWavT = np.ma.masked_where(np.ma.getmask(maskedWavY), self.wavT)
-        self.wavY = maskedWavY.compressed()
-        self.wavT = maskedWavT.compressed()
+        #maskedWavY = np.ma.masked_where(np.isfinite(self.wavY), self.wavY)
+        #maskedWavT = np.ma.masked_where(np.ma.getmask(maskedWavY), self.wavT)
+        #self.wavY = maskedWavY.compressed()
+        #self.wavT = maskedWavT.compressed()
+
+        #maskedWavY = np.ma.masked_where(np.absolute(self.wavY) < .001, self.wavY)
+        #maskedWavT = np.ma.masked_where(np.ma.getmask(maskedWavY), self.wavT)
+        #self.wavY = maskedWavY.compressed()
+        #self.wavT = maskedWavT.compressed()
 
         ## get the maximum for buckets of 5 ms each
         #bucketEach = 0.005
@@ -461,7 +483,27 @@ class Capture:
         #self.wavY = maskedWavY.compressed()
         #self.wavT = maskedWavT.compressed()
 
-        print("wav percentage: {}".format(100 * len(self.wavT) / (self.audioDuration * self.audioFs)))
+        #print("wav percentage: {}".format(100 * len(self.wavT) / (self.audioDuration * self.audioFs)))
+
+        combineSamples=int(0.005 * self.audioFs)
+        #print("combineSamples {}".format(combineSamples))
+
+        self.wavHullT = []
+        self.wavHullYh = []
+        self.wavHullYl = []
+        for i in range(combineSamples, len(self.wavT), combineSamples):
+            self.wavHullT += [self.wavT[i - combineSamples // 2]]
+            self.wavHullYh += [np.amax(self.wavY[i - combineSamples:i])]
+            self.wavHullYl += [np.amin(self.wavY[i - combineSamples:i])]
+        self.wavHullYd = np.abs(np.array(self.wavHullYh) - np.array(self.wavHullYl)) / 2
+
+        samplesPerSecond = len(self.wavHullYd) / self.audioDuration
+        peaks,_ = signal.find_peaks(self.wavHullYd, distance=0.1*samplesPerSecond, width=6)
+        #self.wavHullTtrigg = np.take(self.wavHullT, peaks)
+        #self.wavHullYtrigg = np.take(self.wavHullYd, peaks)
+        self.wavHullTtrigg = np.array([[t-0.0000001,t,t+0.0000001] for t in np.take(self.wavHullT, peaks)]).flatten()
+        self.wavHullYtrigg = np.array([[0,v,0] for v in np.take(self.wavHullYd, peaks)]).flatten()
+
 
     def plotPos(self, fig):
         print("plotting position...")
@@ -523,10 +565,24 @@ class Capture:
 
     def plotAudio(self, fig):
         print("plotting audio...")
+        #fig.add_trace(go.Scattergl(
+        #    name='{} wav'.format(self.getIdentifier()),
+        #    x=self.wavT,
+        #    y=self.wavY,
+        #    yaxis=plotAxisWav,
+        #))
         fig.add_trace(go.Scattergl(
-            name='{} wav'.format(self.getIdentifier()),
-            x=self.wavT,
-            y=self.wavY,
+            name='{} wav hull D'.format(self.getIdentifier()),
+            x=self.wavHullT,
+            y=self.wavHullYd,
+            yaxis=plotAxisWav,
+        ))
+        fig.add_trace(go.Scattergl(
+            name='{} wav trigg'.format(self.getIdentifier()),
+            #x=self.wavHullT,
+            #y=self.wavHullYl,
+            x=self.wavHullTtrigg,
+            y=self.wavHullYtrigg,
             yaxis=plotAxisWav,
         ))
 
