@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     captures = []
     extractIdx = 0
-    invalidSamples = 0
+    invalidTriggers = 0
     audioPeaks = []
     for file in fileBasenames:
         usedPeaks = set()
@@ -28,7 +28,7 @@ if __name__ == "__main__":
             print("reading {}".format(file))
             cap = Capture.fromFile(path, file)
 
-            for t,_ in cap.triggers:
+            for t,state in cap.triggers:
                 # find wav peak for this trigger
                 searchBefore = .03
                 searchAfter = .06
@@ -58,8 +58,8 @@ if __name__ == "__main__":
                     except Exception:
                         continue
                     if np.sum(cap.wavHullYd[wavFrom:wavTo]) > 0.01:
-                        invalidSamples += 1
-                    audioPeak = -1.0
+                        invalidTriggers += 1
+                    audioPeak = 0.0
                 else:
                     audioPeak = cap.wavHullYtrigg[peak]
 
@@ -83,6 +83,7 @@ if __name__ == "__main__":
                     'vel': vel,
                     'triggerTime': t - t0,
                     'audioPeak': audioPeak,
+                    'logicState': state,
                 }
 
                 # Store data (serialize)
@@ -146,4 +147,4 @@ if __name__ == "__main__":
         'audioPeaks': audioPeaks,
     }
     pd.DataFrame(meta).to_csv(os.path.join(extractDir, '.meta'), index=None)
-    print("extracted {} samples, and skipped {} invalid samples".format(extractIdx, invalidSamples))
+    print("extracted {} samples, and skipped {} invalid triggers".format(extractIdx, invalidTriggers))

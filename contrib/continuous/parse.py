@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import copy
 import glob
 import math
 import numpy as np
@@ -392,19 +393,18 @@ class Capture:
 
         # Detect triggers
         self.triggers = []
+        self.triggersStates = []
         self.tTriggers = []
         self.yTriggers = []
         logicState = LogicState()
-        lastPressed = self.t[0]
         for i in range(len(self.rawDt)):
             logicState.nextState(self.rawTime[i], self.rawDt[i], self.rawSensorData[i])
             if logicState.changed:
                 if logicState.pressed:
-                    lastPressed = self.t[i]
+                    self.triggers += [(self.t[i], copy.deepcopy(logicState))]
                     self.tTriggers += [self.t[i] - 0.0000001, self.t[i]]
                     self.yTriggers += [0, logicState.pressVelocity]
                 else:
-                    self.triggers += [(lastPressed, self.t[i])]
                     self.tTriggers += [self.t[i] - 0.0000001, self.t[i]]
                     self.yTriggers += [logicState.pressVelocity, 0]
 
