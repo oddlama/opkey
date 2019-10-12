@@ -21,6 +21,24 @@ pedalReleaseThreshold = 0.1
 pedalPressThreshold = 0.2
 velocityEmaAlpha = 0.1
 
+def findFromTo(b, e, t):
+    for i,v in enumerate(t):
+        if v >= b:
+            rFrom = i
+            break
+    else:
+        raise Exception("Could not find matching time for begin")
+
+    for i,v in enumerate(t):
+        if v >= e:
+            rTo = i
+            break
+    else:
+        raise Exception("Could not find matching time for end")
+
+    return (rFrom,rTo)
+
+
 def IsValidVelocityMaximum(pos, vel):
     return (vel >= 10.0) or ((pos > .25) and (vel > 3.0))
 
@@ -497,12 +515,62 @@ class Capture:
             self.wavHullYl += [np.amin(self.wavY[i - combineSamples:i])]
         self.wavHullYd = np.abs(np.array(self.wavHullYh) - np.array(self.wavHullYl)) / 2
 
+        #self.wavHullYd = 20 * np.log10(self.wavHullYd)
+        #self.wavHullYd = signal.savgol_filter(self.wavHullYd, 53, 3)
         samplesPerSecond = len(self.wavHullYd) / self.audioDuration
+        #peaks,_ = signal.find_peaks(self.wavHullYd, distance=0.1*samplesPerSecond, width=0.1*samplesPerSecond, height=-70)
         peaks,_ = signal.find_peaks(self.wavHullYd, distance=0.1*samplesPerSecond, width=6)
+        #prominences = signal.peak_prominences(self.wavHullYd, peaks)[0]
         #self.wavHullTtrigg = np.take(self.wavHullT, peaks)
         #self.wavHullYtrigg = np.take(self.wavHullYd, peaks)
-        self.wavHullTtrigg = np.array([[t-0.0000001,t,t+0.0000001] for t in np.take(self.wavHullT, peaks)]).flatten()
-        self.wavHullYtrigg = np.array([[0,v,0] for v in np.take(self.wavHullYd, peaks)]).flatten()
+        self.wavHullTtrigg = np.take(self.wavHullT, peaks)
+        self.wavHullYtrigg = np.take(self.wavHullYd, peaks)
+
+        self.firstValid = max(self.wavT[0], self.meta.getOverallOffsetSec())
+        self.lastValid = self.wavT[-1]
+
+        # preform wav offset synchronization, by applying the averaging distance
+        # between manual triggers and wav peaks (+desiredAttackTime).
+        guessedOffset = 0
+        guesses = 0
+        for t,_ in self.triggers:
+            searchRadius = .3
+            b = max(self.firstValid, t - searchRadius)
+            e = min(self.lastValid, t + searchRadius)
+            if e - b < searchRadius:
+                continue
+
+            try:
+                (trFrom, trTo) = findFromTo(b, e, self.wavHullTtrigg)
+            except Exception:
+                continue
+
+            smallestDistance = searchRadius
+            gO = 0
+            for i in range(trFrom, trTo):
+                distance = t - self.wavHullTtrigg[i]
+                absd = np.abs(distance)
+                if absd < smallestDistance:
+                    smallestDistance = absd
+                    gO = distance
+
+            if smallestDistance < searchRadius:
+                guessedOffset += gO
+                guesses += 1
+
+
+
+        if guesses > 0:
+            #desiredAttackTime = .05
+            desiredAttackTime = .0
+            offsetCorrection = (guessedOffset / guesses) + desiredAttackTime
+            #print("offsetCorrection {}".format(offsetCorrection))
+
+            self.firstValid += offsetCorrection
+            self.lastValid += offsetCorrection
+            self.wavT += offsetCorrection
+            self.wavHullT += offsetCorrection
+            self.wavHullTtrigg += offsetCorrection
 
 
     def plotPos(self, fig):
@@ -577,12 +645,14 @@ class Capture:
             y=self.wavHullYd,
             yaxis=plotAxisWav,
         ))
+        wavHullTtrigg = np.array([[t-0.0000001,t,t+0.0000001] for t in self.wavHullTtrigg]).flatten()
+        wavHullYtrigg = np.array([[0,v,0] for v in self.wavHullYtrigg]).flatten()
         fig.add_trace(go.Scattergl(
             name='{} wav trigg'.format(self.getIdentifier()),
             #x=self.wavHullT,
             #y=self.wavHullYl,
-            x=self.wavHullTtrigg,
-            y=self.wavHullYtrigg,
+            x=wavHullTtrigg,
+            y=wavHullYtrigg,
             yaxis=plotAxisWav,
         ))
 
