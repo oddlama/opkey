@@ -58,7 +58,7 @@ def get_sample_X_raw_element_3(s):
 def get_sample_X_raw_element_4(s):
     return s['logicState'].vel
 def get_sample_X_raw_element_5(s):
-    return s['logicState'].velEma
+    return 0.0 #s['logicState'].velEma
 def get_sample_X_raw_element_6(s):
     return (s['logicState'].lastUpdateTime - s['logicState'].maxVelTime) / 10000
 
@@ -71,12 +71,18 @@ get_sample_X_raw_f = {
     5: get_sample_X_raw_element_5,
     6: get_sample_X_raw_element_6,
 }
+
+#X_raw_size = len(get_sample_X_raw_f)
+#def get_sample_X_raw_element(s, i):
+#    return get_sample_X_raw_f[i](s)
+
+X_raw_size = 8
 def get_sample_X_raw_element(s, i):
-    return get_sample_X_raw_f[i](s)
+    return s['poshist'][i]
 
 def get_sample_X_raw(s):
     X = []
-    for i in range(len(get_sample_X_raw_f)):
+    for i in range(X_raw_size):
         X += [get_sample_X_raw_element(s, i)]
     return X
 
@@ -123,12 +129,13 @@ def create_linear_scaler(samples, f):
 def extract_standardization_parameters_X(samples):
     global XScalers
 
-    scaleMask = [0, 3, 4]
-    for i in range(len(get_sample_X_raw_f)):
-        if i in scaleMask:
-            XScalers[i] = create_linear_scaler(samples, lambda s: get_sample_X_raw_element(s, i))
-        else:
-            XScalers[i] = NoopScaler()
+    #scaleMask = [0, 3, 4]
+    for i in range(X_raw_size):
+        XScalers[i] = create_linear_scaler(samples, lambda s: get_sample_X_raw_element(s, i))
+        #if i in scaleMask:
+        #    XScalers[i] = create_linear_scaler(samples, lambda s: get_sample_X_raw_element(s, i))
+        #else:
+        #    XScalers[i] = NoopScaler()
 
 def extract_standardization_parameters_y(samples):
     global yScalers
@@ -151,6 +158,20 @@ def load_samples():
         # Load data
         with open(f, 'rb') as handle:
             samples.append(pickle.load(handle))
+
+    for s in samples:
+        triggerTime = s['triggerTime']
+        ti = 0
+        for i,v in enumerate(s['t']):
+            if v > triggerTime:
+                ti = i
+                break
+        else:
+            raise Exception("no trigger in sample")
+
+        s['poshist'] = []
+        for x in range(X_raw_size):
+            s['poshist'] += [s['pos'][ti - x]]
 
     print("loaded {} samples".format(len(samples)))
 
@@ -230,8 +251,7 @@ mode = sys.argv[1]
 
 # Create model
 model = tf.keras.Sequential()
-model.add(layers.Dense(6, activation='relu', kernel_initializer='normal', input_shape=(7,)))
-model.add(layers.Dense(6, activation='relu', kernel_initializer='normal'))
+model.add(layers.Dense(6, activation='relu', kernel_initializer='normal', input_shape=(X_raw_size,)))
 model.add(layers.Dense(1, activation='tanh', kernel_initializer='normal'))
 
 # Compile model

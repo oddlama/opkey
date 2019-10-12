@@ -73,12 +73,12 @@ if __name__ == "__main__":
                     continue
 
                 t0 = cap.t[rawFrom]
-                t = [int((x - t0) * 1000000) for x in cap.t[rawFrom:rawTo]]
+                time = [int((x - t0) * 1000000) for x in cap.t[rawFrom:rawTo]]
                 pos = cap.rawPos[rawFrom:rawTo]
                 vel = cap.rawVel[rawFrom:rawTo]
                 audioPeaks += [audioPeak]
                 data = {
-                    't': t,
+                    't': time,
                     'pos': pos,
                     'vel': vel,
                     'triggerTime': t - t0,
