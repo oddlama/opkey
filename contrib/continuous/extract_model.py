@@ -15,14 +15,14 @@ for i,w in enumerate(weights):
             print("\t{" if ix == 0 else "\t,", end=' ')
             for iy,y in enumerate(x):
                 print("{" if iy == 0 else ",", end=' ')
-                print("{:24.21f}".format(y), end='')
+                print("{:28.25f}".format(y), end='')
             print(" }")
         print("\t}};")
     else:
         print("static constexpr const std::array<double, {}> dense{}_biases =".format(w.shape[0], i // 2))
         for ix,x in enumerate(w):
             print("\t{" if ix == 0 else ",", end=' ')
-            print("{:24.21f}".format(y), end='')
+            print("{:28.25f}".format(x), end='')
         print(" };")
 
 def mul(name, ashape, af, bshape, bf):
@@ -72,19 +72,25 @@ revert_y("y", weights[3].shape[0],
     lambda i: "tanh1_{}".format(i))
 
 print("// -------- END GENERATED KERAS MODEL EVALUATION --------")
-#print("1")
-#print(weights[0].shape, '*', y.shape)
-X = np.array([-0.916862, -0.900252,  1.31824,   1.3029,    1.2373,    1.22804,   1.27976, 1.27552,   0.877882,  0.451394,  0.08503,  -0.171998, -0.280448, -0.368166, -0.50558,  -0.657406])
-y = X
-y = (y @ weights[0]) + weights[1]
-y[y < 0] = 0
-#print("2")
-#print(weights[1].shape, '*', y.shape)
-y = (y @ weights[2]) + weights[3]
-y = np.tanh(y)
-#print("3")
-y = (y + 1) / 2
-print(y)
+
+
+##print("1")
+##print(weights[0].shape, '*', y.shape)
+#X = np.array([-0.916862, -0.900252,  1.31824,   1.3029,    1.2373,    1.22804,   1.27976, 1.27552,   0.877882,  0.451394,  0.08503,  -0.171998, -0.280448, -0.368166, -0.50558,  -0.657406])
+#y = X
+#print(y)
+#y = (y @ weights[0])
+#print(y)
+#y = y + weights[1]
+#print(y)
+#y[y < 0] = 0
+##print("2")
+##print(weights[1].shape, '*', y.shape)
+#y = (y @ weights[2]) + weights[3]
+#y = np.tanh(y)
+##print("3")
+#y = (y + 1) / 2
+#print(y)
 
 #import h5py
 #filename = 'weights.h5'
