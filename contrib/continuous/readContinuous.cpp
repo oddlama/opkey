@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
 				namespace ch = std::chrono;
 				++countSame;
 				if (countSame == TRANSACTION_BEGIN_COUNT && c == TRANSACTION_BEGIN_CHAR) {
-					system((std::string(CMD_POST_RECORD)).data());
+					system((std::string(CMD_POST_RECORD) + " " + outPath + " " + std::to_string(meta.uniqueSessionId)).data());
 					meta.recordEnd = ch::steady_clock::now();
 					newTransaction = true;
 				} else if (countSame == PRE_RECORD_TAG_COUNT && c == PRE_RECORD_TAG_CHAR) {

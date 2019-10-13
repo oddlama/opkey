@@ -215,6 +215,8 @@ void SensorManager::OnTick() {
 				});
 
 			static int slot = 0;
+			//constexpr const auto sensorRepetitions = 2;
+			//static int repetition = 0;
 
 			singleSensorHistory[slot * 2 + 0] = logicStates[mode_params::singleSensorMonitoringSensor].delta;
 			singleSensorHistory[slot * 2 + 1] = logicStates[mode_params::singleSensorMonitoringSensor].rawPos;
@@ -230,8 +232,17 @@ void SensorManager::OnTick() {
 				fflush(stdin);
 				fflush(stdout);
 
+				//if (++repetition == sensorRepetitions) {
+				//	repetition = 0;
+				//	size_t s = mode_params::singleSensorMonitoringSensor.GetIndex() + 1;
+				//	if (s >= Sensor::keyCount) {
+				//		s = Sensor::keyOffset;
+				//	}
+				//	mode_params::singleSensorMonitoringSensor = Sensor{s};
+				//}
+
 				auto now = esp_timer_get_time();
-				fmt::print("recording in 1 sec...\n");
+				fmt::print("recording {} in 1 sec...\n", mode_params::singleSensorMonitoringSensor.GetName());
 				write(1, "\005\005\005\005\005\005\005\005", 8);
 				while (esp_timer_get_time() - now < 1000000) {
 					; // wait
@@ -349,13 +360,14 @@ void SensorManager::OnModeChange(Mode oldMode, Mode newMode) {
 			fflush(stdout);
 
 			auto now = esp_timer_get_time();
-			fmt::print("recording in 1 sec...\n");
+			fmt::print("recording {} in 1 sec...\n", mode_params::singleSensorMonitoringSensor.GetName());
 			write(1, "\005\005\005\005\005\005\005\005", 8);
 			while (esp_timer_get_time() - now < 1000000) {
 				; // wait
 			}
 			fmt::print("recording\n");
-			break;                          }
+			break;
+		}
 
 		default: {
 			adcController.SetAdcModeAuto();

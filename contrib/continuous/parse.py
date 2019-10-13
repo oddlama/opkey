@@ -503,7 +503,7 @@ class Capture:
 
         #print("wav percentage: {}".format(100 * len(self.wavT) / (self.audioDuration * self.audioFs)))
 
-        combineSamples=int(0.005 * self.audioFs)
+        combineSamples=int(2.5 / keyFrequencies[self.sensorName] * self.audioFs)
         #print("combineSamples {}".format(combineSamples))
 
         self.wavHullT = []

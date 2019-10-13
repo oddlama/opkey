@@ -1,3 +1,5 @@
 readContinuous
 __pycache__
 data
+extracted
+*.h5

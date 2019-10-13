@@ -76,7 +76,7 @@ get_sample_X_raw_f = {
 #def get_sample_X_raw_element(s, i):
 #    return get_sample_X_raw_f[i](s)
 
-X_raw_size = 8
+X_raw_size = 16
 def get_sample_X_raw_element(s, i):
     return s['poshist'][i]
 
@@ -188,7 +188,7 @@ def augment_X(X):
 
 def augment_y(y):
     noise = np.random.normal(0,1,len(y))
-    return y + 0.05 * noise
+    return y + 0.005 * noise
 
 def get_bucket_idx(bucketCount, y):
     y = (y + 1) / 2
