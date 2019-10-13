@@ -33,10 +33,13 @@ public:
 	void InitSingleSensorHistory();
 	void CalculateNextSensorState(SensorData& newData);
 	void CalculateNextSensorState(size_t rawIndex, double newData);
+	double CalculatePressVelocity(const LogicState& state);
 
 private:
 	SensorLogicStateData logicStates{};
+#ifdef ENABLE_SINGLE_SENSOR_MONITORING
 	std::array<uint16_t, config::singleSensorHistorySize> singleSensorHistory;
+#endif
 
 	AdcController adcController{};
 

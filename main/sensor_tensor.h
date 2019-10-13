@@ -48,14 +48,22 @@ using SensorData = SensorTensor<double>;
 struct LogicState {
 	// Time of last update
 	int64_t lastUpdateTime = 0;
+
+#ifdef ENABLE_SINGLE_SENSOR_MONITORING
+	// For SingleSensorMonitoring
 	uint16_t delta = 0;
 	uint16_t rawPos = 0;
+#endif
+
 	// Current position
 	double pos = 0.0;
 	// Current velocity
 	double vel = 0.0;
 	// Exponential moving average of velocity = EMA(vel)
-	double velEma = 0.0;
+	//double velEma = 0.0;
+
+	std::array<double, 16> posHistory{};
+	int posHistoryCurrent = 0;
 
 	// Key/Pedal state has changed regarding to the last known state
 	bool changed = false;
@@ -71,12 +79,10 @@ struct LogicState {
 
 	// Time at which the velocity reached a maximum
 	int64_t maxVelTime = 0;
-	// The velocity value at its maximum
-	double maxVel = 0.0;
-	// The EMA(vel) at the velocity maximum
-	double maxVelEma = 0.0;
 	// The pos at the velocity maximum
 	double maxVelPos = 0.0;
+	// The velocity value at its maximum
+	double maxVel = 0.0;
 };
 
 using SensorLogicStateData = SensorTensor<LogicState>;

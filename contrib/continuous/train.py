@@ -145,7 +145,7 @@ def extract_standardization_parameters_y(samples):
 
 def load_samples():
     if len(sys.argv) != 3:
-        print("usage: train.py train <extract_dir>")
+        print("usage: train.py {} <extract_dir>".format(sys.argv[1]))
         sys.exit(1)
 
     extractDir = sys.argv[2]
@@ -314,3 +314,35 @@ elif mode == "test":
         predictionError += np.abs(p - y)
     print("error (absolute) manual {:5.3f}, prediction {:5.3f}".format(manualError, predictionError))
     print("error (mean)     manual {:5.3f}, prediction {:5.3f}".format(manualError / len(samples), predictionError / len(samples)))
+elif mode == "export":
+    print("loading weights")
+    model.load_weights('model.h5')
+    print("exporting weights")
+    with open('weights.pickle', 'wb') as handle:
+        pickle.dump(model.get_weights(), handle, protocol=pickle.HIGHEST_PROTOCOL)
+elif mode == "quickeval":
+    # Load data
+    print("loading data")
+    samples = load_samples()
+
+    # load model
+    print("loading weights")
+    model.load_weights('model.h5')
+
+    print("evaluating...")
+    for i in range(16):
+        s = samples[i]
+        X = np.array([get_sample_X(s)])
+        y = revert_sample_y(get_sample_y(s))[0]
+        p = revert_sample_y(model.predict(X)[0])[0]
+        #y = (get_sample_y(s)[0] + 1) / 2
+        #p = (model.predict(X)[0][0] + 1) / 2
+        m = s['logicState'].pressVelocity
+        print("  X = {}".format(X[0]))
+        print("  manual {:5.3f}, predicted {:5.3f}, expected {:5.3f}".format(m, p, y))
+elif mode == "plot":
+    # load model
+    print("loading weights")
+    model.load_weights('model.h5')
+
+    keras.utils.plot_model(model, to_file='/tmp/abc.png')
