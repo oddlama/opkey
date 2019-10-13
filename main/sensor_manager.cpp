@@ -173,7 +173,7 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 }
 
 double SensorManager::CalculatePressVelocity(const LogicState& state) {
-	auto modelBegin = esp_timer_get_time();
+	//auto modelBegin = esp_timer_get_time();
 	std::array<double, 16> x{};
 	static_assert(x.size() == state.posHistory.size(), "Mismatching position history sizes");
 
@@ -342,8 +342,11 @@ double SensorManager::CalculatePressVelocity(const LogicState& state) {
 	double y_0 = (tanh1_0 + 1.0) / 2.0;
 	// -------- END GENERATED KERAS MODEL EVALUATION --------
 
-	auto modelEnd = esp_timer_get_time();
-	fmt::print("model evaluation took {}us, y = {}\n", modelEnd - modelBegin, y_0);
+	//y_0 = std::clamp(y_0, 0.0, 1.0);
+	//y_0 = std::clamp(-log(1 - y_0), 0.0, 1.0);
+	y_0 = std::clamp(y_0 * 2.0, 0.0, 1.0);
+	//auto modelEnd = esp_timer_get_time();
+	//fmt::print("model evaluation took {}us, y = {}\n", modelEnd - modelBegin, y_0);
 	return y_0;
 }
 
