@@ -66,17 +66,19 @@ namespace characteristic_options {
 		}
 	};
 
+	struct EmptySendArrayPtr{};
+	struct EmptyRecvArrayPtr{};
 	template<auto* SendArrayPtr, auto* RecvArrayPtr = SendArrayPtr>
 	struct BindArray
 		: private CharacteristicMixinTag
-		, private std::conditional_t<SendArrayPtr == nullptr, struct MissingSendArrayPtr, ReadHandlerTag>
-		, private std::conditional_t<RecvArrayPtr == nullptr, struct MissingRecvArrayPtr, WriteHandlerTag>
+		, private std::conditional_t<SendArrayPtr == nullptr, EmptySendArrayPtr, ReadHandlerTag>
+		, private std::conditional_t<RecvArrayPtr == nullptr, EmptyRecvArrayPtr, WriteHandlerTag>
 	{
 	private:
 		using TSendArrayPtr = std::decay_t<std::remove_pointer_t<decltype(SendArrayPtr)>>;
 		using TRecvArrayPtr = std::decay_t<std::remove_pointer_t<decltype(RecvArrayPtr)>>;
-		static_assert(std::is_same_v<std::nullptr_t, TSendArrayPtr> || std::is_base_of_v<ArrayTag, TSendArrayPtr>, "BindArray (SendArrayPtr) can only be used in conjunction with ble::Array variables");
-		static_assert(std::is_same_v<std::nullptr_t, TRecvArrayPtr> || std::is_base_of_v<ArrayTag, TRecvArrayPtr>, "BindArray (RecvArrayPtr) can only be used in conjunction with ble::Array variables");
+		static_assert(std::is_same_v<void, TSendArrayPtr> || std::is_base_of_v<ArrayTag, TSendArrayPtr>, "BindArray (SendArrayPtr) can only be used in conjunction with ble::Array variables");
+		static_assert(std::is_same_v<void, TRecvArrayPtr> || std::is_base_of_v<ArrayTag, TRecvArrayPtr>, "BindArray (RecvArrayPtr) can only be used in conjunction with ble::Array variables");
 
 	public:
 		static int OnRead(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context) {
@@ -95,6 +97,11 @@ namespace characteristic_options {
 			return err == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 		}
 	};
+
+	template<auto* SendArrayPtr>
+	using BindSendArray = BindArray<SendArrayPtr, static_cast<const void*>(nullptr)>;
+	template<auto* RecvArrayPtr>
+	using BindRecvArray = BindArray<static_cast<const void*>(nullptr), RecvArrayPtr>;
 
 	template<auto* VariablePtr>
 	struct BindVariable

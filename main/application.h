@@ -44,22 +44,25 @@ public:
 public:
 	void operator()();
 
-	void SetNextMode(Mode newMode) {
-		nextMode = newMode;
-	}
-
-	void ApplyNextMode() {
-		onModeChangeSignal.publish(mode, nextMode);
-		mode = nextMode;
-	}
-
+	void SetNextMode(Mode newMode) { nextMode = newMode; }
 	auto& GetMode() const noexcept { return mode; }
 	auto& GetNextMode() const noexcept { return nextMode; }
 
 	const auto& GetSensorManager() const noexcept { return sensorManager; }
 	auto& GetOnTickSink() noexcept { return onTickSink; }
 	auto& GetOnModeChangeSink() noexcept { return onModeChangeSink; }
-	auto& GetOnSensorStateChangeSink() noexcept { return sensorManager.GetOnSensorStateChangeSink(); }
+
+	auto& GetOnSensorStateChangeSignal() noexcept { return onSensorStateChangeSignal; }
+	auto& GetOnSensorStateChangeSink() noexcept { return onSensorStateChangeSink; }
+
+	auto& GetOnMidiRecvSignal() noexcept { return onMidiRecvSignal; }
+	auto& GetOnMidiRecvSink() noexcept { return onMidiRecvSink; }
+
+private:
+	void ApplyNextMode() {
+		onModeChangeSignal.publish(mode, nextMode);
+		mode = nextMode;
+	}
 
 private:
 	Mode mode = Mode::Idle;
@@ -70,6 +73,10 @@ private:
 	entt::sink<void()> onTickSink{onTickSignal};
 	entt::sigh<void(Mode, Mode)> onModeChangeSignal{};
 	entt::sink<void(Mode, Mode)> onModeChangeSink{onModeChangeSignal};
+	entt::sigh<void(const SensorManager&, Sensor sensor)> onSensorStateChangeSignal{};
+	entt::sink<void(const SensorManager&, Sensor sensor)> onSensorStateChangeSink{onSensorStateChangeSignal};
+	entt::sigh<void(const ble::Array<64>&)> onMidiRecvSignal{};
+	entt::sink<void(const ble::Array<64>&)> onMidiRecvSink{onMidiRecvSignal};
 
 	// Different components
 	SensorManager sensorManager{*this};

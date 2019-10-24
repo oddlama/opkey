@@ -6,6 +6,7 @@
 #include "spinlock.h"
 #include "sensor.h"
 #include "sensor_manager.h"
+#include "ble_array.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -32,6 +33,7 @@ public:
 	void OnTick();
 	void OnModeChange(Mode oldMode, Mode newMode);
 	void OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor);
+	void OnMidiRecv(const ble::Array<64>& midiPacket);
 
 private:
 	// Task related stuff
@@ -49,6 +51,7 @@ private:
 	entt::scoped_connection onTickConnection;
 	entt::scoped_connection onModeChangeConnection;
 	entt::scoped_connection onSensorStateChangeConnection;
+	entt::scoped_connection onMidiRecvConnection;
 
 	// Led strip and sensor manager ref
 	RmtLedStrip<PixelRgbw, RmtTimingsSk6812, 88 * 2 - 1> ledStrip{GPIO_NUM_32};

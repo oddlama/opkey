@@ -41,7 +41,7 @@ def findFromTo(b, e, t):
 
 
 def IsValidVelocityMaximum(pos, vel):
-    return (vel >= 10.0) or ((pos > .25) and (vel > 3.0))
+    return ((pos > .25) and (vel >= 10.0)) or ((pos > .4) and (vel > 3.0))
 
 class LogicState:
     def __init__(self):
@@ -326,6 +326,9 @@ class Capture:
         c.yTriggers = []
         c.rawPos = []
         c.rawVel = []
+        c.emaPos = []
+        c.emaVel = []
+        c.emaAcc = []
         c.wavT = []
         c.wavY = []
         c.wavHullT = []
@@ -341,6 +344,9 @@ class Capture:
             c.yTriggers.extend(capture.yTriggers)
             c.rawPos.extend(capture.rawPos)
             c.rawVel.extend(capture.rawVel)
+            c.emaPos.extend(capture.emaPos)
+            c.emaVel.extend(capture.emaVel)
+            c.emaAcc.extend(capture.emaAcc)
             c.wavT.extend(capture.wavT)
             c.wavY.extend(capture.wavY)
             c.wavHullT.extend(capture.wavHullT)
@@ -411,13 +417,24 @@ class Capture:
         ### Calculate pos and vel
         ##self.rawPos = self.rawSensorData
         ##self.rawVel = np.insert(np.diff(self.rawPos) * self.tStepInv, 0, 0)
-        ##global aat
-        ##aat = .0
-        ##def accumTen(i):
-        ##    global aat
-        ##    aat = aat * .9 + i * .1
-        ##    return aat
-        ##self.emaPos = [accumTen(i) for i in self.rawPos]
+        global aat
+        aat = .0
+        def accumTen(i):
+            global aat
+            aat = aat * .9 + i * .1
+            return aat
+        self.emaPos = [accumTen(i) for i in self.rawPos]
+        #self.emaVel = np.insert(np.diff(self.emaPos) * self.tStepInv, 0, 0)
+        self.emaVel = [0] + [(self.emaPos[i + 1] - self.emaPos[i]) * (1000000.0 / self.rawDt[i + 1]) for i in range(len(self.emaPos) - 1)]
+        #self.emaAcc = [0] + [(self.emaVel[i + 1] - self.emaVel[i]) * (10000.0 / self.rawDt[i + 1]) for i in range(len(self.emaVel) - 1)]
+        self.emaAcc = [0] + [(self.rawVel[i + 1] - self.rawVel[i]) * (10000.0 / self.rawDt[i + 1]) for i in range(len(self.rawVel) - 1)]
+        global bat
+        bat = .0
+        def accumTen2(i):
+            global bat
+            bat = bat * .9 + i * .1
+            return bat
+        self.emaAcc = [accumTen2(i) for i in self.rawVel]
         ##global bbt
         ##bbt = .0
         ##def accumTen2(i):
@@ -618,18 +635,24 @@ class Capture:
                 y=self.rawVel,
                 yaxis=plotAxisVelRaw,
             ))
-            #fig.add_trace(go.Scattergl(
-            #    name='{} pos ema'.format(self.getIdentifier()),
-            #    x=self.t,
-            #    y=self.emaPos,
-            #    yaxis=plotAxisPosRaw,
-            #))
-            #fig.add_trace(go.Scattergl(
-            #    name='{} vel ema'.format(self.getIdentifier()),
-            #    x=self.t,
-            #    y=self.emaVel,
-            #    yaxis=plotAxisVelRaw,
-            #))
+            fig.add_trace(go.Scattergl(
+                name='{} pos ema'.format(self.getIdentifier()),
+                x=self.t,
+                y=self.emaPos,
+                yaxis=plotAxisPosRaw,
+            ))
+            fig.add_trace(go.Scattergl(
+                name='{} vel ema'.format(self.getIdentifier()),
+                x=self.t,
+                y=self.emaVel,
+                yaxis=plotAxisVelRaw,
+            ))
+            fig.add_trace(go.Scattergl(
+                name='{} acc ema'.format(self.getIdentifier()),
+                x=self.t,
+                y=self.emaAcc,
+                yaxis=plotAxisVelRaw,
+            ))
 
     def plotAudio(self, fig):
         print("plotting audio...")

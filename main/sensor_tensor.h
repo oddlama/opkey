@@ -63,7 +63,8 @@ struct LogicState {
 	//double velEma = 0.0;
 
 	std::array<double, 16> posHistory{};
-	int posHistoryCurrent = 0;
+	std::array<int32_t, 16> deltaHistory{};
+	int currentHistoryIndex = 0;
 
 	// Key/Pedal state has changed regarding to the last known state
 	bool changed = false;

@@ -76,9 +76,16 @@ get_sample_X_raw_f = {
 #def get_sample_X_raw_element(s, i):
 #    return get_sample_X_raw_f[i](s)
 
-X_raw_size = 16
+#X_raw_size = 16
+#def get_sample_X_raw_element(s, i):
+#    return s['poshist'][i]
+
+X_raw_size = 2
 def get_sample_X_raw_element(s, i):
-    return s['poshist'][i]
+    if i == 0:
+        return s['velmax'] / 60.0
+    else:
+        return s['posatvelmax']
 
 def get_sample_X_raw(s):
     X = []
@@ -131,7 +138,8 @@ def extract_standardization_parameters_X(samples):
 
     #scaleMask = [0, 3, 4]
     for i in range(X_raw_size):
-        XScalers[i] = create_linear_scaler(samples, lambda s: get_sample_X_raw_element(s, i))
+        XScalers[i] = NoopScaler()
+        #XScalers[i] = create_linear_scaler(samples, lambda s: get_sample_X_raw_element(s, i))
         #if i in scaleMask:
         #    XScalers[i] = create_linear_scaler(samples, lambda s: get_sample_X_raw_element(s, i))
         #else:
@@ -139,7 +147,7 @@ def extract_standardization_parameters_X(samples):
 
 def extract_standardization_parameters_y(samples):
     global yScalers
-    yScalers[0] = create_linear_scaler(samples, get_sample_y_raw)
+    yScalers[0] = NoopScaler() #create_linear_scaler(samples, get_sample_y_raw)
 
 
 
@@ -159,6 +167,8 @@ def load_samples():
         with open(f, 'rb') as handle:
             samples.append(pickle.load(handle))
 
+    maxAudioPeak = 0.0
+    #apks = []
     for s in samples:
         triggerTime = s['triggerTime']
         ti = 0
@@ -170,9 +180,31 @@ def load_samples():
             raise Exception("no trigger in sample")
 
         s['poshist'] = []
+        s['velhist'] = []
+        mv = 0
+        pmv = 0
         for x in range(X_raw_size):
-            s['poshist'] += [s['pos'][ti - x]]
+            p = s['pos'][ti - x]
+            v = (s['pos'][ti - x] - s['pos'][ti - x - 1]) * (1000000.0 / (s['t'][ti - x] - s['t'][ti - x - 1]))
+            s['poshist'] += [p]
+            s['velhist'] += [v]
+            if v > mv:
+                mv = v
+                pmv = p
 
+        s['velmax'] = mv
+        s['posatvelmax'] = pmv
+        #apks += [s['audioPeak']]
+        if s['audioPeak'] > maxAudioPeak:
+            maxAudioPeak = s['audioPeak']
+        #print("velmax = {} pos@velmax = {}".format(mv, pmv))
+
+    #mean = np.mean(apks)
+    #stdvar = np.sqrt(np.var(apks))
+    for s in samples:
+        s['audioPeak'] /= maxAudioPeak #(s['audioPeak'] - mean) / stdvar
+    #print("m {} v {}".format(mean, var))
+    #print("maxAudioPeak = {}".format(maxAudioPeak))
     print("loaded {} samples".format(len(samples)))
 
     extract_standardization_parameters_X(samples)
@@ -184,7 +216,7 @@ def load_samples():
 
 def augment_X(X):
     noise = np.random.normal(0,1,len(X))
-    return X + 0.05 * noise
+    return X + 0.05 * noise[0]
 
 def augment_y(y):
     noise = np.random.normal(0,1,len(y))
@@ -253,6 +285,8 @@ mode = sys.argv[1]
 model = tf.keras.Sequential()
 model.add(layers.Dense(6, activation='relu', kernel_initializer='normal', input_shape=(X_raw_size,)))
 model.add(layers.Dense(1, activation='tanh', kernel_initializer='normal'))
+#model.add(layers.Dense(2, activation='relu', kernel_initializer='normal', input_shape=(X_raw_size,)))
+#model.add(layers.Dense(2, activation='relu', kernel_initializer='normal'))
 
 # Compile model
 print("compiling model")

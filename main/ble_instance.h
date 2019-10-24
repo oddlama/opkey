@@ -5,7 +5,6 @@
 #include "ble_meta.h"
 #include "ble_uuid.h"
 #include "ble_server.h"
-#include "ble_instance.h"
 
 #include <unordered_set>
 

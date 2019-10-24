@@ -13,11 +13,12 @@ namespace opkey {
 int OnPacketSendRequest(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context);
 int OnPacketWrite(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context);
 
+int OnMidiPacket(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context);
+
 
 namespace blecfg {
 
 inline ble::Array<64> midiPacketSend{};
-inline ble::Array<64> midiPacketRecv{};
 
 using namespace ble;
 namespace chr = ble::characteristic_options;
@@ -32,7 +33,8 @@ using MidiService = Service
 	< MidiSvcUuid
 	, Characteristic
 		< MidiChrUuid
-		, chr::BindArray<&midiPacketSend, &midiPacketRecv>
+		, chr::BindSendArray<&midiPacketSend>
+		, chr::WriteCallback<&OnMidiPacket>
 		, chr::Notify
 		, chr::WriteNoResponse
 		>

@@ -12,6 +12,7 @@ Visualizer::Visualizer(Application& application)
 	: onTickConnection(application.GetOnTickSink().connect<&Visualizer::OnTick>(*this))
 	, onModeChangeConnection(application.GetOnModeChangeSink().connect<&Visualizer::OnModeChange>(*this))
 	, onSensorStateChangeConnection(application.GetOnSensorStateChangeSink().connect<&Visualizer::OnSensorStateChange>(*this))
+	, onMidiRecvConnection(application.GetOnMidiRecvSink().connect<&Visualizer::OnMidiRecv>(*this))
 	, sensorManager(application.GetSensorManager())
 {
 	static auto DispatchMain = [](void* param) [[noreturn]] {
@@ -255,6 +256,14 @@ void Visualizer::OnSensorStateChange(const SensorManager& sensorManager, Sensor 
 	//}
 
 	//TODO needsUpdate = true;
+}
+
+void Visualizer::OnMidiRecv(const ble::Array<64>& midiPacket) {
+	fmt::print("recv midi message: {{ {:02x}", midiPacket[0]);
+	for (size_t i = 1; i < midiPacket.size(); ++i) {
+		fmt::print(", {:02x}", midiPacket[i]);
+	}
+	fmt::print(" }\n");
 }
 
 

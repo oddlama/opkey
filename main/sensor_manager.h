@@ -24,7 +24,6 @@ public:
 	SensorManager& operator=(SensorManager&&) = delete;
 
 	const auto& GetLogicStates() const noexcept { return logicStates; }
-	auto& GetOnSensorStateChangeSink() noexcept { return onSensorStateChangeSink; }
 
 	void OnTick();
 	void OnModeChange(Mode oldMode, Mode newMode);
@@ -45,8 +44,6 @@ private:
 
 	entt::scoped_connection onTickConnection;
 	entt::scoped_connection onModeChangeConnection;
-	entt::sigh<void(const SensorManager&, Sensor sensor)> onSensorStateChangeSignal{};
-	entt::sink<void(const SensorManager&, Sensor sensor)> onSensorStateChangeSink{onSensorStateChangeSignal};
 };
 
 

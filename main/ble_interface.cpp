@@ -1,6 +1,7 @@
 #include "fmt.h"
 #include "application.h"
 #include "sensor_manager.h"
+#include "midi.h"
 
 #include "ble_interface.h"
 
@@ -48,6 +49,28 @@ int OnPacketWrite(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt
 }
 
 
+int OnMidiPacket(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context) {
+	static ble::Array<64> midiPacketRecv{};
+	if (OS_MBUF_PKTLEN(context->om) > midiPacketRecv.size()) {
+		return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN;
+	}
+
+	uint16_t countCopied;
+	int err = ble_hs_mbuf_to_flat(context->om, midiPacketRecv.data(), midiPacketRecv.size(), &countCopied);
+	if (countCopied == 0) {
+		return 0;
+	}
+
+	midiPacketRecv.SetUsedSize(countCopied);
+	if (err != 0) {
+		return BLE_ATT_ERR_INSUFFICIENT_RES;
+	}
+
+	Application::instance->GetOnMidiRecvSignal().publish(midiPacketRecv);
+	return 0;
+}
+
+
 BleInterface::BleInterface(Application& application)
 	: onTickConnection(application.GetOnTickSink().connect<&BleInterface::OnTick>(*this))
 	, onSensorStateChangeConnection(application.GetOnSensorStateChangeSink().connect<&BleInterface::OnSensorStateChange>(*this))
@@ -88,10 +111,11 @@ void BleInterface::OnTick() {
 			}
 		});
 
-		// TODO b0 = control change
-		blecfg::midiPacketSend = { 0x80, 0x80, 0xb0
-			, 0x43 /* soft   */, pedalValues[0]
-			, 0x40 /* damper */, pedalValues[1]
+		auto [ h0, h1 ] = midi::Header();
+		blecfg::midiPacketSend = { h0, h1
+			, midi::status::controlChange
+			, midi::ccSensorSoft, pedalValues[0]
+			, midi::ccSensorDamp, pedalValues[1]
 			};
 
 		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
@@ -103,19 +127,24 @@ void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Senso
 	//TODO send midi reset all keys up when mode is changed!
 	auto& state = sensorManager.GetLogicStates()[sensor];
 	if (state.pressed) {
-		// TODO only accumulate midi buffer, send on tick or second fin event?
-		//fmt::print("key[0x{:02x}, {:2d}, {:4s}] down  pos: {:7.2f} vel: {:7.2f}\n",
-		//		sensor.GetIndex(),
-		//		sensor.GetIndex(),
-		//		sensor.GetName(),
-		//		keyPos, keyVel);
-		// TODO midiPacketGenerator.append(0x90, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), static_cast<uint8_t>(0x7f * v));
-		// TODO *0x7f is not right, *0x80 and check == 1.0 before
-		blecfg::midiPacketSend = { 0x80, 0x80, 0x90, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), static_cast<uint8_t>(0x7f * state.pressVelocity) };
+		uint8_t vel;
+		if (state.pressVelocity >= 1.0) {
+			vel = 0x7f;
+		} else {
+			vel = static_cast<uint8_t>(0x80 * state.pressVelocity);
+		}
+		auto [ h0, h1 ] = midi::Header();
+		blecfg::midiPacketSend = { h0, h1
+			, midi::status::noteOn
+			, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), vel
+			};
 		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
 	} else {
-		//fmt::print("key[{:2d}] up    pos: {:7.2f} vel: {:7.2f} acc: {:7.2f}\n", static_cast<size_t>(sensor), keyPos, keyVel, keyAcc);
-		blecfg::midiPacketSend = { 0x80, 0x80, 0x80, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), 0x00 };
+		auto [ h0, h1 ] = midi::Header();
+		blecfg::midiPacketSend = { h0, h1
+			, midi::status::noteOff
+			, static_cast<uint8_t>(0x15 + sensor.GetKeyIndex()), 0x00
+			};
 		bleInstance.template NotifyAll<blecfg::MidiChrUuid>();
 	}
 }

@@ -166,7 +166,7 @@ inline constexpr const int64_t minTriggerJitterDelayUs = 15000;
  * be considered a trigger candidate.
  */
 inline constexpr const auto IsValidVelocityMaximum = [](double pos, double vel) {
-		return vel >= 10.0 || (pos > .25 && vel > 3.0);
+		return (pos > .25 && vel > 10.0) || (pos > .4 && vel > 3.0);
 	};
 
 /**
