@@ -41,6 +41,8 @@ private:
 	//TODO Spinlock spinlock{};
 	//TODO bool needsUpdate = false;
 	SensorLogicStateData logicStates{};
+	// TODO yolo make nice pls
+	SensorTensor<double> receivedPresses{};
 
 #ifndef NDEBUG
 	int64_t debugLedFpsTime = 0;

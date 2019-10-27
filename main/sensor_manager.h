@@ -32,7 +32,7 @@ public:
 	void InitSingleSensorHistory();
 	void CalculateNextSensorState(SensorData& newData);
 	void CalculateNextSensorState(size_t rawIndex, double newData);
-	double CalculatePressVelocity(const LogicState& state);
+	double CalculatePressVelocity(Sensor sensor, const LogicState& state);
 
 private:
 	SensorLogicStateData logicStates{};

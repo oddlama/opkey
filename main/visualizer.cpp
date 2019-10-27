@@ -3,6 +3,7 @@
 #include "visualizer.h"
 #include "application.h"
 #include "sensor_manager.h"
+#include "midi.h"
 
 
 namespace opkey {
@@ -127,9 +128,24 @@ void Visualizer::TaskMain() {
 					auto& pixel = ledStrip[ledIndex * 2];
 					auto& state = logicStates[key];
 
-					if (state.pressed) {
+					double c;
+					double vel;
+					bool forcePress = false;
+					if (receivedPresses[key] > 0.0) {
+						vel = receivedPresses[key];
+						c = 4.0 / 12.0 + 3.0 * vel / 12.0;
+						forcePress = true;
+						// TODO brighten dark colors
+						vel = 0.1 + vel * 0.9;
+					} else {
+						vel = state.pressVelocity;
+						c = -1.0 / 48.0 - softPedalState.pos / 4.0 + (2.0 / 19.0) * vel;
+					}
+					if (c < 0)
+						c += 1;
+					if (state.pressed || forcePress) {
 						PixelRgbw targetColor{};
-						targetColor.SetHsv(((9.0 - (4.0 * softPedalState.pos)) / 16.0) + (5.0 / 16.0) * state.pressVelocity, 1.0, state.pressVelocity);
+						targetColor.SetHsv(c, 1.0, vel);
 						pixel.SetLerp(targetColor, 0.5);
 					} else if (dampPedalState.pressed &&
 							dampPedalState.lastPressTime < state.lastReleaseTime) {
@@ -149,7 +165,7 @@ void Visualizer::TaskMain() {
 						}
 
 						PixelRgbw targetColor{};
-						targetColor.SetHsv(((9.0 - (4.0 * softPedalState.pos)) / 16.0) + (5.0 / 16.0) * state.pressVelocity, 1.0, decay * state.pressVelocity);
+						targetColor.SetHsv(c, 1.0, decay * vel);
 						pixel.SetLerp(targetColor, 0.5);
 					} else {
 						PixelRgbw targetColor{};
@@ -260,10 +276,61 @@ void Visualizer::OnSensorStateChange(const SensorManager& sensorManager, Sensor 
 
 void Visualizer::OnMidiRecv(const ble::Array<64>& midiPacket) {
 	fmt::print("recv midi message: {{ {:02x}", midiPacket[0]);
-	for (size_t i = 1; i < midiPacket.size(); ++i) {
+	for (size_t i = 1; i < midiPacket.GetUsedSize(); ++i) {
 		fmt::print(", {:02x}", midiPacket[i]);
 	}
-	fmt::print(" }\n");
+	fmt::print(" }}\n");
+
+	if (midiPacket.GetUsedSize() < 2) {
+		return;
+	}
+
+	// TODO niceify, this is shit code, POC only
+	uint8_t status = 0;
+	uint8_t dataIndex = 0;
+	uint8_t data0 = 0;
+	for (size_t i = 2; i < midiPacket.GetUsedSize(); ++i) {
+		auto cur = midiPacket[i];
+		if ((cur & 0x80) != 0) {
+			status = cur;
+			dataIndex = 0;
+		} else {
+			switch (status) {
+				case midi::status::noteOn:
+					if (dataIndex == 0) {
+						data0 = cur;
+						++dataIndex;
+					} else {
+						auto sensor = Sensor{data0 - 0x15u};
+						double velocity = static_cast<double>(cur) / 0x7f;
+						receivedPresses[sensor] = velocity;
+						fmt::print("recv key[0x{:02x}, {:4s}] on ({})\n",
+							sensor.GetIndex(),
+							sensor.GetName(),
+							velocity);
+						dataIndex = 0;
+					}
+					break;
+				case midi::status::noteOff:
+					if (dataIndex == 0) {
+						data0 = cur;
+						++dataIndex;
+					} else {
+						auto sensor = Sensor{data0 - 0x15u};
+						receivedPresses[sensor] = 0.0;
+						fmt::print("recv key[0x{:02x}, {:4s}] off\n",
+							sensor.GetIndex(),
+							sensor.GetName());
+						dataIndex = 0;
+					}
+					break;
+				default:
+					// ignore
+					++dataIndex;
+					break;
+			}
+		}
+	}
 }
 
 

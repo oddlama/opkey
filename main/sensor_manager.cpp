@@ -150,7 +150,7 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 					state.pressed = true;
 					state.changed = true;
 					state.lastPressTime = state.maxVelTime;
-					state.pressVelocity = CalculatePressVelocity(state);
+					state.pressVelocity = CalculatePressVelocity(sensor, state);
 					//fmt::print("[2;37mkey[0x{:02x}, {:4s}] possible: pos {:7.2f} vel {:7.2f} EMApd{:7.2f} EMAvd {:7.2f}[m\n",
 					//	sensor.GetIndex(),
 					//	sensor.GetName(),
@@ -173,8 +173,7 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 	}
 }
 
-double SensorManager::CalculatePressVelocity(const LogicState& state) {
-	auto modelBegin = esp_timer_get_time();
+double SensorManager::CalculatePressVelocity(Sensor sensor, const LogicState& state) {
 	double velMax = 0.0;
 	double posAtVelMax = 0.0;
 
@@ -194,6 +193,14 @@ double SensorManager::CalculatePressVelocity(const LogicState& state) {
 		}
 		lastPos = pos;
 	}
+
+	//fmt::print("key[0x{:02x}, {:4s}] pos {:7.2f} velMax {:7.2f}\n",
+	//	sensor.GetIndex(),
+	//	sensor.GetName(),
+	//	posAtVelMax,
+	//	velMax / 120.0);
+
+	return std::clamp(velMax / 120.0, 0.0, 1.0);
 
 	auto x = std::array{ velMax / 60.0, posAtVelMax };
 
@@ -223,8 +230,6 @@ double SensorManager::CalculatePressVelocity(const LogicState& state) {
 
 	y_0 *= 2.3607011588069176;
 	y_0 = std::clamp(y_0, 0.0, 1.0);
-	auto modelEnd = esp_timer_get_time();
-	fmt::print("model evaluation took {}us, y = {}\n", modelEnd - modelBegin, y_0);
 	return y_0;
 }
 
