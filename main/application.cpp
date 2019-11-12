@@ -16,7 +16,7 @@ namespace opkey {
 		static Application application{};
 		Application::instance = &application;
 		application();
-	} catch(OpKeyException& e) {
+	} catch (OpKeyException& e) {
 		esp::loge("Caught exception: {}\nDevice will abort() and restart in 60 seconds.", e.what());
 
 		ErrorVisualizer visualizer{e};
@@ -35,10 +35,10 @@ namespace opkey {
 
 		esp::loge("Aborting.");
 		abort();
-	} catch(std::exception& e) {
+	} catch (std::exception& e) {
 		esp::loge("Caught exception: {}\nAborting.", e.what());
 		abort();
-	} catch(...) {
+	} catch (...) {
 		esp::loge("Caught unkown exception type\nAborting.");
 		abort();
 	}

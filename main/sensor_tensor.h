@@ -62,8 +62,8 @@ struct LogicState {
 	// Exponential moving average of velocity = EMA(vel)
 	//double velEma = 0.0;
 
-	std::array<double, 16> posHistory{};
-	std::array<int32_t, 16> deltaHistory{};
+	std::array<double, 2> posHistory{};
+	std::array<int32_t, 2> deltaHistory{};
 	int currentHistoryIndex = 0;
 
 	// Key/Pedal state has changed regarding to the last known state

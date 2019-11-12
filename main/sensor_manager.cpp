@@ -68,6 +68,18 @@ void SensorManager::CalculateNextSensorState(SensorData& newData) {
 void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 	OPKEY_PROFILE_FUNCTION();
 
+	// TODO static int64_t lastu = 0;
+	// TODO static int xki = 0;
+	// TODO if (rawIndex == 0) {
+	// TODO 	++xki;
+	// TODO 	auto now = esp_timer_get_time();
+	// TODO 	auto diff = now - lastu;
+	// TODO 	if (diff > 1000000) {
+	// TODO 		fmt::print("tickrate per key: every {} us = {} tps\n", diff / xki, 1000000.0 * xki / diff);
+	// TODO 		xki = 0;
+	// TODO 		lastu = now;
+	// TODO 	}
+	// TODO }
 	auto sensor = Sensor{config::GetSensorIndexFromRawIndex(rawIndex)};
 	auto& state = logicStates[sensor];
 
@@ -84,10 +96,55 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 	auto prevPos = state.posHistory[state.currentHistoryIndex];
 	auto prevVel = state.vel;
 
-	// 1. Position is sqrt(data), because light intensity is 1/(distance^2)
-	// 2. Apply calibration
-	auto rawPos = sqrt(newData);
-	state.pos = calibration::calibrationData[sensor].Apply(rawPos);
+	//static int iii = 1;
+	//if (iii % 100 == 0) {
+	//	if (sensor.GetIndex() == 0x10u+0*12u || sensor.GetIndex() == 0x10u+0*12u+1u ||
+	//		sensor.GetIndex() == 0x10u+1*12u || sensor.GetIndex() == 0x10u+1*12u+1u ||
+	//		sensor.GetIndex() == 0x10u+2*12u || sensor.GetIndex() == 0x10u+2*12u+1u)
+	//	{
+	//		fmt::print("key[0x{:02x}, {:4s}] rawpos {}\n",
+	//			sensor.GetIndex(),
+	//			sensor.GetName(),
+	//			newData);
+	//	}
+	//}
+	//if (sensor.GetIndex() == 0u) {
+	//	if (++iii == 1001) {
+	//		iii = 1;
+	//	}
+	//}
+	//// 1. Position is sqrt(data), because light intensity is 1/(distance^2)
+	//// 2. Apply calibration
+	//auto rawPos = sqrt(newData);
+	//state.pos = calibration::calibrationData[sensor].Apply(rawPos);
+
+	auto isWhiteKey = [](auto i) {
+		switch (i / 12) {
+			default:
+			case 0:
+			case 2:
+			case 3:
+			case 5:
+			case 7:
+			case 8:
+			case 10:
+				return true;
+			case 1:
+			case 4:
+			case 6:
+			case 9:
+			case 11:
+				return false;
+		}
+	};
+
+	if (isWhiteKey(sensor.GetKeyIndex())) {
+		// White keys
+		state.pos = -1.609864 - (-19.9053/7.83965)*(1 - exp(-7.83965*newData));
+	} else {
+		// Black keys
+		state.pos = -0.7957951 - (-9.450975/6.014812)*(1 - exp(-6.014812*newData));
+	}
 	state.vel = (state.pos - prevPos) * (1000000.0 / deltaTime);
 
 	// Save pos in history
@@ -194,43 +251,43 @@ double SensorManager::CalculatePressVelocity(Sensor sensor, const LogicState& st
 		lastPos = pos;
 	}
 
-	//fmt::print("key[0x{:02x}, {:4s}] pos {:7.2f} velMax {:7.2f}\n",
-	//	sensor.GetIndex(),
-	//	sensor.GetName(),
-	//	posAtVelMax,
-	//	velMax / 120.0);
+	fmt::print("key[0x{:02x}, {:4s}] pos {:7.2f} velMax {:7.2f}\n",
+		sensor.GetIndex(),
+		sensor.GetName(),
+		posAtVelMax,
+		velMax / 60.0);
 
-	return std::clamp(velMax / 120.0, 0.0, 1.0);
+	return std::clamp(velMax / 60.0, 0.0, 1.0);
 
-	auto x = std::array{ velMax / 60.0, posAtVelMax };
+	//auto x = std::array{ velMax / 60.0, posAtVelMax };
 
-	// -------- BEGIN GENERATED KERAS MODEL EVALUATION --------
-	static constexpr const std::array<std::array<double, 1>, 2> dense0_weights = {
-		{ { -2.6731438636779785156250000 }
-		, {  2.5020406246185302734375000 }
-		}};
-	static constexpr const std::array<double, 1> dense0_biases =
-		{  0.2287315726280212402343750 };
-	static constexpr const std::array<std::array<double, 1>, 1> dense1_weights = {
-		{ { -2.8131725788116455078125000 }
-		}};
-	static constexpr const std::array<double, 1> dense1_biases =
-		{ -0.6620918512344360351562500 };
-	double mul0_0x0 =
-		x[ 0] * dense0_weights[ 0][ 0] +
-		x[ 1] * dense0_weights[ 1][ 0];
-	double add0_0 = mul0_0x0 + dense0_biases[ 0];
-	double relu0_0 = add0_0 < 0.0 ? 0.0 : add0_0;
-	double mul1_0x0 =
-		relu0_0 * dense1_weights[ 0][ 0];
-	double add1_0 = mul1_0x0 + dense1_biases[ 0];
-	double tanh1_0 = tanh(add1_0);
-	double y_0 = (tanh1_0 + 1.0) / 2.0;
-	// -------- END GENERATED KERAS MODEL EVALUATION --------
+	//// -------- BEGIN GENERATED KERAS MODEL EVALUATION --------
+	//static constexpr const std::array<std::array<double, 1>, 2> dense0_weights = {
+	//	{ { -2.6731438636779785156250000 }
+	//	, {  2.5020406246185302734375000 }
+	//	}};
+	//static constexpr const std::array<double, 1> dense0_biases =
+	//	{  0.2287315726280212402343750 };
+	//static constexpr const std::array<std::array<double, 1>, 1> dense1_weights = {
+	//	{ { -2.8131725788116455078125000 }
+	//	}};
+	//static constexpr const std::array<double, 1> dense1_biases =
+	//	{ -0.6620918512344360351562500 };
+	//double mul0_0x0 =
+	//	x[ 0] * dense0_weights[ 0][ 0] +
+	//	x[ 1] * dense0_weights[ 1][ 0];
+	//double add0_0 = mul0_0x0 + dense0_biases[ 0];
+	//double relu0_0 = add0_0 < 0.0 ? 0.0 : add0_0;
+	//double mul1_0x0 =
+	//	relu0_0 * dense1_weights[ 0][ 0];
+	//double add1_0 = mul1_0x0 + dense1_biases[ 0];
+	//double tanh1_0 = tanh(add1_0);
+	//double y_0 = (tanh1_0 + 1.0) / 2.0;
+	//// -------- END GENERATED KERAS MODEL EVALUATION --------
 
-	y_0 *= 2.3607011588069176;
-	y_0 = std::clamp(y_0, 0.0, 1.0);
-	return y_0;
+	//y_0 *= 2.3607011588069176;
+	//y_0 = std::clamp(y_0, 0.0, 1.0);
+	//return y_0;
 }
 
 

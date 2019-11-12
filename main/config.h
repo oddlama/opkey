@@ -125,7 +125,7 @@ inline constexpr const double calibrationNearBoundaryMinRange = 0.05;
 /**
  * Single sensor history size for single sensor traces
  */
-inline static constexpr const size_t singleSensorHistorySize = 7 * 4096u;
+inline static constexpr const size_t singleSensorHistorySize = 6 * 4096u;
 
 /**
  * Names for the sensors. Max 4 characters!
@@ -166,7 +166,7 @@ inline constexpr const int64_t minTriggerJitterDelayUs = 15000;
  * be considered a trigger candidate.
  */
 inline constexpr const auto IsValidVelocityMaximum = [](double pos, double vel) {
-		return (pos > .25 && vel > 8.0) || (pos > .4 && vel > 2.0);
+		return (pos > .25 && vel > 3.0) || (pos > .4 && vel > 2.0);
 	};
 
 /**

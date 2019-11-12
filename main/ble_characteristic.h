@@ -258,7 +258,7 @@ struct Characteristic : private CharacteristicTag {
 	}
 
 private:
-	static int NimbleOnAccess(uint16_t connHandle, uint16_t attrHandle, ble_gatt_access_ctxt* context, void* arg) {
+	static int NimbleOnAccess([[maybe_unused]] uint16_t connHandle, [[maybe_unused]] uint16_t attrHandle, ble_gatt_access_ctxt* context, void* arg) {
 		switch (context->op) {
 			case BLE_GATT_ACCESS_OP_READ_CHR:
 				if constexpr (hasReadHandler) {
@@ -279,10 +279,6 @@ private:
 			case BLE_GATT_ACCESS_OP_WRITE_DSC:
 				return BLE_ATT_ERR_UNLIKELY;
 		}
-
-		// Suppress usage warnings due to constexpr branches
-		(void)connHandle;
-		(void)attrHandle;
 
 		return BLE_ATT_ERR_UNLIKELY;
 	}

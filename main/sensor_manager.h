@@ -37,7 +37,7 @@ public:
 private:
 	SensorLogicStateData logicStates{};
 #ifdef ENABLE_SINGLE_SENSOR_MONITORING
-	std::array<uint16_t, config::singleSensorHistorySize> singleSensorHistory;
+	std::array<uint16_t, config::singleSensorHistorySize> singleSensorHistory{};
 #endif
 
 	AdcController adcController{};

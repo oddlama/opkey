@@ -329,14 +329,14 @@ class Capture:
         c.emaPos = []
         c.emaVel = []
         c.emaAcc = []
-        c.wavT = []
-        c.wavY = []
-        c.wavHullT = []
-        c.wavHullYh = []
-        c.wavHullYl = []
-        c.wavHullYd = []
-        c.wavHullTtrigg = []
-        c.wavHullYtrigg = []
+        ## XXX c.wavT = []
+        ## XXX c.wavY = []
+        ## XXX c.wavHullT = []
+        ## XXX c.wavHullYh = []
+        ## XXX c.wavHullYl = []
+        ## XXX c.wavHullYd = []
+        ## XXX c.wavHullTtrigg = []
+        ## XXX c.wavHullYtrigg = []
         for capture in captures:
             c.count += capture.count
             c.t.extend(capture.t)
@@ -347,14 +347,14 @@ class Capture:
             c.emaPos.extend(capture.emaPos)
             c.emaVel.extend(capture.emaVel)
             c.emaAcc.extend(capture.emaAcc)
-            c.wavT.extend(capture.wavT)
-            c.wavY.extend(capture.wavY)
-            c.wavHullT.extend(capture.wavHullT)
-            c.wavHullYh.extend(capture.wavHullYh)
-            c.wavHullYl.extend(capture.wavHullYl)
-            c.wavHullYd.extend(capture.wavHullYd)
-            c.wavHullTtrigg.extend(capture.wavHullTtrigg)
-            c.wavHullYtrigg.extend(capture.wavHullYtrigg)
+            ## XXX c.wavT.extend(capture.wavT)
+            ## XXX c.wavY.extend(capture.wavY)
+            ## XXX c.wavHullT.extend(capture.wavHullT)
+            ## XXX c.wavHullYh.extend(capture.wavHullYh)
+            ## XXX c.wavHullYl.extend(capture.wavHullYl)
+            ## XXX c.wavHullYd.extend(capture.wavHullYd)
+            ## XXX c.wavHullTtrigg.extend(capture.wavHullTtrigg)
+            ## XXX c.wavHullYtrigg.extend(capture.wavHullYtrigg)
         return c
 
     def __getRawFile(self):
@@ -456,138 +456,138 @@ class Capture:
         ### Calculate t0 based velocity
         ##self.t0Vel = [(e - self.rawPos[self.indexT0]) * 1000000 / (self.t[i] - self.t0) for i,e in enumerate(self.rawPos)]
 
-        wavFile = self.getWavFile()
-        (self.audioFs, self.audioData) = scipy.io.wavfile.read(wavFile)
-        if self.audioData.shape[1] == 2:
-            self.audioData = self.audioData[:,0]
-        if self.audioData.dtype == np.int16:
-            self.audioData = self.audioData / (2**(16-1))
-        elif self.audioData.dtype == np.int32:
-            self.audioData = self.audioData / (2**(32-1))
-        self.audioDuration = len(self.audioData) / self.audioFs
+        ## XXX   wavFile = self.getWavFile()
+        ## XXX   (self.audioFs, self.audioData) = scipy.io.wavfile.read(wavFile)
+        ## XXX   if self.audioData.shape[1] == 2:
+        ## XXX       self.audioData = self.audioData[:,0]
+        ## XXX   if self.audioData.dtype == np.int16:
+        ## XXX       self.audioData = self.audioData / (2**(16-1))
+        ## XXX   elif self.audioData.dtype == np.int32:
+        ## XXX       self.audioData = self.audioData / (2**(32-1))
+        ## XXX   self.audioDuration = len(self.audioData) / self.audioFs
 
-        lowcut = keyFrequencies[self.sensorName] * (1.0 - maxKeyFreqDeviation)
-        highcut = keyFrequencies[self.sensorName] * (1.0 + maxKeyFreqDeviation)
-        #print("lowcut {}, highcut {}".format(lowcut, highcut))
+        ## XXX   lowcut = keyFrequencies[self.sensorName] * (1.0 - maxKeyFreqDeviation)
+        ## XXX   highcut = keyFrequencies[self.sensorName] * (1.0 + maxKeyFreqDeviation)
+        ## XXX   #print("lowcut {}, highcut {}".format(lowcut, highcut))
 
-        #self.audioData = butter_bandpass_filter(self.audioData, lowcut, highcut, self.audioFs)
-        self.audioData = self.audioData[::28]
-        self.audioFs = int(self.audioFs / 28)
-        self.audioData = butter_bandpass_filter(self.audioData, lowcut, highcut, self.audioFs)
+        ## XXX   #self.audioData = butter_bandpass_filter(self.audioData, lowcut, highcut, self.audioFs)
+        ## XXX   self.audioData = self.audioData[::28]
+        ## XXX   self.audioFs = int(self.audioFs / 28)
+        ## XXX   self.audioData = butter_bandpass_filter(self.audioData, lowcut, highcut, self.audioFs)
 
-        recordOffset = 0.953 + 0.045 - 0.025
-        #displayRange = (self.t[0], ccap.t[-1])
-        #readRange = (recordOffset, recordOffset + (displayRange[1] - displayRange[0]))
+        ## XXX   recordOffset = 0.953 + 0.045 - 0.025
+        ## XXX   #displayRange = (self.t[0], ccap.t[-1])
+        ## XXX   #readRange = (recordOffset, recordOffset + (displayRange[1] - displayRange[0]))
 
-        #first = int(readRange[0] * self.audioFs)
-        #last = int(readRange[1] * self.audioFs)
+        ## XXX   #first = int(readRange[0] * self.audioFs)
+        ## XXX   #last = int(readRange[1] * self.audioFs)
 
-        #self.wavT = np.linspace(displayRange[0], displayRange[1], num=(last - first))
+        ## XXX   #self.wavT = np.linspace(displayRange[0], displayRange[1], num=(last - first))
 
-        self.wavY = self.audioData
-        #self.wavY = butter_bandpass_filter(self.audioData, lowcut, highcut, self.audioFs)
-        #self.wavY = np.array(self.audioData)
-        self.wavOffset = self.meta.getOverallOffsetSec() - recordOffset
-        self.wavT = np.linspace(self.wavOffset, self.wavOffset + self.audioDuration, num=len(self.wavY))
+        ## XXX   self.wavY = self.audioData
+        ## XXX   #self.wavY = butter_bandpass_filter(self.audioData, lowcut, highcut, self.audioFs)
+        ## XXX   #self.wavY = np.array(self.audioData)
+        ## XXX   self.wavOffset = self.meta.getOverallOffsetSec() - recordOffset
+        ## XXX   self.wavT = np.linspace(self.wavOffset, self.wavOffset + self.audioDuration, num=len(self.wavY))
 
-        #maskedWavY = np.ma.masked_where(np.isfinite(self.wavY), self.wavY)
-        #maskedWavT = np.ma.masked_where(np.ma.getmask(maskedWavY), self.wavT)
-        #self.wavY = maskedWavY.compressed()
-        #self.wavT = maskedWavT.compressed()
+        ## XXX   #maskedWavY = np.ma.masked_where(np.isfinite(self.wavY), self.wavY)
+        ## XXX   #maskedWavT = np.ma.masked_where(np.ma.getmask(maskedWavY), self.wavT)
+        ## XXX   #self.wavY = maskedWavY.compressed()
+        ## XXX   #self.wavT = maskedWavT.compressed()
 
-        #maskedWavY = np.ma.masked_where(np.absolute(self.wavY) < .001, self.wavY)
-        #maskedWavT = np.ma.masked_where(np.ma.getmask(maskedWavY), self.wavT)
-        #self.wavY = maskedWavY.compressed()
-        #self.wavT = maskedWavT.compressed()
+        ## XXX   #maskedWavY = np.ma.masked_where(np.absolute(self.wavY) < .001, self.wavY)
+        ## XXX   #maskedWavT = np.ma.masked_where(np.ma.getmask(maskedWavY), self.wavT)
+        ## XXX   #self.wavY = maskedWavY.compressed()
+        ## XXX   #self.wavT = maskedWavT.compressed()
 
-        ## get the maximum for buckets of 5 ms each
-        #bucketEach = 0.005
-        #buckets = int(len(self.wavY) / (bucketEach * self.audioFs))
-        #split = np.array_split(self.wavY, buckets)
-        #self.wavY = []
-        #for i in split:
-        #    self.wavY += [np.amax(i)]
+        ## XXX   ## get the maximum for buckets of 5 ms each
+        ## XXX   #bucketEach = 0.005
+        ## XXX   #buckets = int(len(self.wavY) / (bucketEach * self.audioFs))
+        ## XXX   #split = np.array_split(self.wavY, buckets)
+        ## XXX   #self.wavY = []
+        ## XXX   #for i in split:
+        ## XXX   #    self.wavY += [np.amax(i)]
 
-        #self.wavY = np.amax(np.stack(split, axis=0), axis=1)
-        #self.wavT = np.linspace(displayRange[0], displayRange[1], num=len(self.wavY))
-        #self.wavY = 20 * np.log10(self.wavY)
+        ## XXX   #self.wavY = np.amax(np.stack(split, axis=0), axis=1)
+        ## XXX   #self.wavT = np.linspace(displayRange[0], displayRange[1], num=len(self.wavY))
+        ## XXX   #self.wavY = 20 * np.log10(self.wavY)
 
-        #wavD = np.diff(np.append(self.wavY, 0))
-        #maskedWavY = np.ma.masked_where(np.abs(wavD) < .02, np.abs(self.wavY))
-        #maskedWavT = np.ma.masked_where(np.ma.getmask(maskedWavY), self.wavT)
-        #self.wavY = maskedWavY.compressed()
-        #self.wavT = maskedWavT.compressed()
+        ## XXX   #wavD = np.diff(np.append(self.wavY, 0))
+        ## XXX   #maskedWavY = np.ma.masked_where(np.abs(wavD) < .02, np.abs(self.wavY))
+        ## XXX   #maskedWavT = np.ma.masked_where(np.ma.getmask(maskedWavY), self.wavT)
+        ## XXX   #self.wavY = maskedWavY.compressed()
+        ## XXX   #self.wavT = maskedWavT.compressed()
 
-        #print("wav percentage: {}".format(100 * len(self.wavT) / (self.audioDuration * self.audioFs)))
+        ## XXX   #print("wav percentage: {}".format(100 * len(self.wavT) / (self.audioDuration * self.audioFs)))
 
-        combineSamples=int(2.5 / keyFrequencies[self.sensorName] * self.audioFs)
-        #print("combineSamples {}".format(combineSamples))
+        ## XXX   combineSamples=int(2.5 / keyFrequencies[self.sensorName] * self.audioFs)
+        ## XXX   #print("combineSamples {}".format(combineSamples))
 
-        self.wavHullT = []
-        self.wavHullYh = []
-        self.wavHullYl = []
-        for i in range(combineSamples, len(self.wavT), combineSamples):
-            self.wavHullT += [self.wavT[i - combineSamples // 2]]
-            self.wavHullYh += [np.amax(self.wavY[i - combineSamples:i])]
-            self.wavHullYl += [np.amin(self.wavY[i - combineSamples:i])]
-        self.wavHullYd = np.abs(np.array(self.wavHullYh) - np.array(self.wavHullYl)) / 2
+        ## XXX   self.wavHullT = []
+        ## XXX   self.wavHullYh = []
+        ## XXX   self.wavHullYl = []
+        ## XXX   for i in range(combineSamples, len(self.wavT), combineSamples):
+        ## XXX       self.wavHullT += [self.wavT[i - combineSamples // 2]]
+        ## XXX       self.wavHullYh += [np.amax(self.wavY[i - combineSamples:i])]
+        ## XXX       self.wavHullYl += [np.amin(self.wavY[i - combineSamples:i])]
+        ## XXX   self.wavHullYd = np.abs(np.array(self.wavHullYh) - np.array(self.wavHullYl)) / 2
 
-        #self.wavHullYd = 20 * np.log10(self.wavHullYd)
-        #self.wavHullYd = signal.savgol_filter(self.wavHullYd, 53, 3)
-        samplesPerSecond = len(self.wavHullYd) / self.audioDuration
-        #peaks,_ = signal.find_peaks(self.wavHullYd, distance=0.1*samplesPerSecond, width=0.1*samplesPerSecond, height=-70)
-        peaks,_ = signal.find_peaks(self.wavHullYd, distance=0.1*samplesPerSecond, width=6)
-        #prominences = signal.peak_prominences(self.wavHullYd, peaks)[0]
-        #self.wavHullTtrigg = np.take(self.wavHullT, peaks)
-        #self.wavHullYtrigg = np.take(self.wavHullYd, peaks)
-        self.wavHullTtrigg = np.take(self.wavHullT, peaks)
-        self.wavHullYtrigg = np.take(self.wavHullYd, peaks)
+        ## XXX   #self.wavHullYd = 20 * np.log10(self.wavHullYd)
+        ## XXX   #self.wavHullYd = signal.savgol_filter(self.wavHullYd, 53, 3)
+        ## XXX   samplesPerSecond = len(self.wavHullYd) / self.audioDuration
+        ## XXX   #peaks,_ = signal.find_peaks(self.wavHullYd, distance=0.1*samplesPerSecond, width=0.1*samplesPerSecond, height=-70)
+        ## XXX   peaks,_ = signal.find_peaks(self.wavHullYd, distance=0.1*samplesPerSecond, width=6)
+        ## XXX   #prominences = signal.peak_prominences(self.wavHullYd, peaks)[0]
+        ## XXX   #self.wavHullTtrigg = np.take(self.wavHullT, peaks)
+        ## XXX   #self.wavHullYtrigg = np.take(self.wavHullYd, peaks)
+        ## XXX   self.wavHullTtrigg = np.take(self.wavHullT, peaks)
+        ## XXX   self.wavHullYtrigg = np.take(self.wavHullYd, peaks)
 
-        self.firstValid = max(self.wavT[0], self.meta.getOverallOffsetSec())
-        self.lastValid = self.wavT[-1]
+        ## XXX   self.firstValid = max(self.wavT[0], self.meta.getOverallOffsetSec())
+        ## XXX   self.lastValid = self.wavT[-1]
 
-        # preform wav offset synchronization, by applying the averaging distance
-        # between manual triggers and wav peaks (+desiredAttackTime).
-        guessedOffset = 0
-        guesses = 0
-        for t,_ in self.triggers:
-            searchRadius = .3
-            b = max(self.firstValid, t - searchRadius)
-            e = min(self.lastValid, t + searchRadius)
-            if e - b < searchRadius:
-                continue
+        ## XXX   # preform wav offset synchronization, by applying the averaging distance
+        ## XXX   # between manual triggers and wav peaks (+desiredAttackTime).
+        ## XXX   guessedOffset = 0
+        ## XXX   guesses = 0
+        ## XXX   for t,_ in self.triggers:
+        ## XXX       searchRadius = .3
+        ## XXX       b = max(self.firstValid, t - searchRadius)
+        ## XXX       e = min(self.lastValid, t + searchRadius)
+        ## XXX       if e - b < searchRadius:
+        ## XXX           continue
 
-            try:
-                (trFrom, trTo) = findFromTo(b, e, self.wavHullTtrigg)
-            except Exception:
-                continue
+        ## XXX       try:
+        ## XXX           (trFrom, trTo) = findFromTo(b, e, self.wavHullTtrigg)
+        ## XXX       except Exception:
+        ## XXX           continue
 
-            smallestDistance = searchRadius
-            gO = 0
-            for i in range(trFrom, trTo):
-                distance = t - self.wavHullTtrigg[i]
-                absd = np.abs(distance)
-                if absd < smallestDistance:
-                    smallestDistance = absd
-                    gO = distance
+        ## XXX       smallestDistance = searchRadius
+        ## XXX       gO = 0
+        ## XXX       for i in range(trFrom, trTo):
+        ## XXX           distance = t - self.wavHullTtrigg[i]
+        ## XXX           absd = np.abs(distance)
+        ## XXX           if absd < smallestDistance:
+        ## XXX               smallestDistance = absd
+        ## XXX               gO = distance
 
-            if smallestDistance < searchRadius:
-                guessedOffset += gO
-                guesses += 1
+        ## XXX       if smallestDistance < searchRadius:
+        ## XXX           guessedOffset += gO
+        ## XXX           guesses += 1
 
 
 
-        if guesses > 0:
-            #desiredAttackTime = .05
-            desiredAttackTime = .0
-            offsetCorrection = (guessedOffset / guesses) + desiredAttackTime
-            #print("offsetCorrection {}".format(offsetCorrection))
+        ## XXX   if guesses > 0:
+        ## XXX       #desiredAttackTime = .05
+        ## XXX       desiredAttackTime = .0
+        ## XXX       offsetCorrection = (guessedOffset / guesses) + desiredAttackTime
+        ## XXX       #print("offsetCorrection {}".format(offsetCorrection))
 
-            self.firstValid += offsetCorrection
-            self.lastValid += offsetCorrection
-            self.wavT += offsetCorrection
-            self.wavHullT += offsetCorrection
-            self.wavHullTtrigg += offsetCorrection
+        ## XXX       self.firstValid += offsetCorrection
+        ## XXX       self.lastValid += offsetCorrection
+        ## XXX       self.wavT += offsetCorrection
+        ## XXX       self.wavHullT += offsetCorrection
+        ## XXX       self.wavHullTtrigg += offsetCorrection
 
 
     def plotPos(self, fig):
@@ -722,5 +722,5 @@ class Capture:
     def plot(self, fig):
         self.plotPos(fig)
         self.plotVel(fig)
-        self.plotAudio(fig)
+        ## XXX self.plotAudio(fig)
         self.plotTriggers(fig)

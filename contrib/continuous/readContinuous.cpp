@@ -37,7 +37,8 @@ struct CalibrationData {
 
 	double Apply(uint16_t rawSensorValue) {
 		double s = static_cast<double>(rawSensorValue) / (maxSensorValue + 1);
-		return (sqrt(s) - min) / (max - min);
+		return s;
+		// XXX return (sqrt(s) - min) / (max - min);
 	}
 };
 
