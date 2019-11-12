@@ -125,6 +125,10 @@ void BleInterface::OnTick() {
 
 void BleInterface::OnSensorStateChange(const SensorManager& sensorManager, Sensor sensor) {
 	//TODO send midi reset all keys up when mode is changed!
+
+
+	//TODO queue all midi events in a midi event queue, which is
+	//simultaneously processed on vizu core (actual notifies)
 	auto& state = sensorManager.GetLogicStates()[sensor];
 	if (state.pressed) {
 		uint8_t vel;

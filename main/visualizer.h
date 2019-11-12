@@ -56,7 +56,9 @@ private:
 	entt::scoped_connection onMidiRecvConnection;
 
 	// Led strip and sensor manager ref
-	RmtLedStrip<PixelRgbw, RmtTimingsSk6812, 88 * 2 - 1> ledStrip{GPIO_NUM_32};
+	inline constexpr static size_t ledCount = 88 * 2 - 1;
+	RmtLedStrip<PixelRgbw, RmtTimingsSk6812, ledCount> ledStrip{GPIO_NUM_32};
+	SensorTensor<bool> keyActive{};
 	const SensorManager& sensorManager;
 };
 

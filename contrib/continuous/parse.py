@@ -41,7 +41,7 @@ def findFromTo(b, e, t):
 
 
 def IsValidVelocityMaximum(pos, vel):
-    return ((pos > .25) and (vel >= 10.0)) or ((pos > .4) and (vel > 3.0))
+    return ((pos > .25) and (vel >= 12.0)) or ((pos > .4) and (vel > 8.0))
 
 class LogicState:
     def __init__(self):
@@ -395,6 +395,7 @@ class Capture:
         #self.t = [(x - self.t0) / 1000 for x in self.csv['time'].values]
         self.t = [self.meta.getOverallOffsetSec() + i / 1000000 for i in self.rawTime]
         self.rawPos = self.rawSensorData
+        self.rawPos = [-1.609864 - (-19.9053/7.83965)*(1 - np.exp(-7.83965*i)) for i in self.rawPos]
         self.rawVel = [0] + [(self.rawPos[i + 1] - self.rawPos[i]) * (1000000.0 / self.rawDt[i + 1]) for i in range(len(self.rawPos) - 1)]
 
         # Detect triggers

@@ -125,6 +125,10 @@ void Visualizer::TaskMain() {
 				//TODO VisualizeNormal();
 				Sensor::ForEachKey([&](Sensor key) {
 					size_t ledIndex = (Sensor::keyCount - 1) - key.GetKeyIndex();
+					if (not keyActive[key]) {
+						return;
+					}
+
 					auto& pixel = ledStrip[ledIndex * 2];
 					auto& state = logicStates[key];
 
@@ -141,11 +145,12 @@ void Visualizer::TaskMain() {
 						vel = state.pressVelocity;
 						c = -1.0 / 48.0 - softPedalState.pos / 4.0 + (2.0 / 19.0) * vel;
 					}
-					if (c < 0)
-						c += 1;
+					if (c < 0) {
+						c += 1 + static_cast<uint64_t>(-c);
+					}
 					if (state.pressed || forcePress) {
 						PixelRgbw targetColor{};
-						targetColor.SetHsv(c, 1.0, vel);
+						targetColor.SetHsvw(c, 1.0, vel, vel / 4);
 						pixel.SetLerp(targetColor, 0.5);
 					} else if (dampPedalState.pressed &&
 							dampPedalState.lastPressTime < state.lastReleaseTime) {
@@ -165,11 +170,14 @@ void Visualizer::TaskMain() {
 						}
 
 						PixelRgbw targetColor{};
-						targetColor.SetHsv(c, 1.0, decay * vel);
+						targetColor.SetHsvw(c, 1.0, decay * vel, decay * vel / 4);
 						pixel.SetLerp(targetColor, 0.5);
 					} else {
 						PixelRgbw targetColor{};
 						pixel.SetLerp(targetColor, 0.1);
+						if (targetColor == pixel) {
+							keyActive[key] = false;
+						}
 					}
 
 					//if (state.pressed) {
@@ -259,6 +267,7 @@ void Visualizer::OnSensorStateChange(const SensorManager& sensorManager, Sensor 
 		return;
 	}
 
+	keyActive[sensor] = true;
 	//auto& h0 = sensorManager.GetHistory()[0];
 	//auto& state = h0.state[sensor];
 
@@ -304,10 +313,11 @@ void Visualizer::OnMidiRecv(const ble::Array<64>& midiPacket) {
 						auto sensor = Sensor{data0 - 0x15u};
 						double velocity = static_cast<double>(cur) / 0x7f;
 						receivedPresses[sensor] = velocity;
-						fmt::print("recv key[0x{:02x}, {:4s}] on ({})\n",
-							sensor.GetIndex(),
-							sensor.GetName(),
-							velocity);
+						keyActive[sensor] = true;
+						//fmt::print("recv key[0x{:02x}, {:4s}] on ({})\n",
+						//	sensor.GetIndex(),
+						//	sensor.GetName(),
+						//	velocity);
 						dataIndex = 0;
 					}
 					break;
@@ -318,10 +328,11 @@ void Visualizer::OnMidiRecv(const ble::Array<64>& midiPacket) {
 					} else {
 						auto sensor = Sensor{data0 - 0x15u};
 						receivedPresses[sensor] = 0.0;
-						fmt::print("recv key[0x{:02x}, {:4s}] off\n",
-							sensor.GetIndex(),
-							sensor.GetName());
-						dataIndex = 0;
+						keyActive[sensor] = true;
+						//fmt::print("recv key[0x{:02x}, {:4s}] off\n",
+						//	sensor.GetIndex(),
+						//	sensor.GetName());
+						//dataIndex = 0;
 					}
 					break;
 				default:

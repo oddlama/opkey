@@ -138,12 +138,15 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 		}
 	};
 
-	if (isWhiteKey(sensor.GetKeyIndex())) {
+	if (sensor.IsPedal()) {
+		// TODO MISSING MEASUREMENT
+		state.pos = sqrt(newData);
+	} else if (isWhiteKey(sensor.GetKeyIndex())) {
 		// White keys
-		state.pos = -1.609864 - (-19.9053/7.83965)*(1 - exp(-7.83965*newData));
+		state.pos = -1.609864 + (19.9053 / 7.83965) * (1 - exp(-7.83965 * newData));
 	} else {
 		// Black keys
-		state.pos = -0.7957951 - (-9.450975/6.014812)*(1 - exp(-6.014812*newData));
+		state.pos = -0.7957951 + (9.450975 / 6.014812) * (1 - exp(-6.014812 * newData));
 	}
 	state.vel = (state.pos - prevPos) * (1000000.0 / deltaTime);
 
@@ -236,6 +239,7 @@ double SensorManager::CalculatePressVelocity(Sensor sensor, const LogicState& st
 
 	auto from = state.currentHistoryIndex + 1;
 	auto to = from + state.posHistory.size();
+	int maxIdx = 0;
 
 	auto lastPos = state.posHistory[from % state.posHistory.size()];
 	// Iterate oldest+1 to newest
@@ -246,18 +250,32 @@ double SensorManager::CalculatePressVelocity(Sensor sensor, const LogicState& st
 		//fmt::print("pos {} in {}us; vel {}\n", pos, t, vel);
 		if (vel > velMax) {
 			velMax = vel;
+			maxIdx = i;
 			posAtVelMax = pos;
 		}
 		lastPos = pos;
 	}
 
-	fmt::print("key[0x{:02x}, {:4s}] pos {:7.2f} velMax {:7.2f}\n",
+	double smvel = 0.0;
+	maxIdx += state.posHistory.size();
+	lastPos = state.posHistory[(maxIdx - 2) % state.posHistory.size()];
+	for (int i = maxIdx - 1; i <= maxIdx + 1; ++i) {
+		auto pos = state.posHistory[i % state.posHistory.size()];
+		auto t = state.deltaHistory[i % state.deltaHistory.size()];
+		double vel = (pos - lastPos) * (1000000.0 / t);
+		smvel += vel;
+		lastPos = pos;
+	}
+	smvel /= 3.0;
+
+	fmt::print("key[0x{:02x}, {:4s}] pos {:7.2f} velMax {:7.2f} smvel {:7.2f}\n",
 		sensor.GetIndex(),
 		sensor.GetName(),
 		posAtVelMax,
-		velMax / 60.0);
+		velMax / 60.0,
+		smvel / 50.0);
 
-	return std::clamp(velMax / 60.0, 0.0, 1.0);
+	return std::clamp(smvel / 50.0, 0.0, 1.0);
 
 	//auto x = std::array{ velMax / 60.0, posAtVelMax };
 

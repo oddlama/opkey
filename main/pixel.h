@@ -68,6 +68,18 @@ public:
 		this->w = static_cast<uint8_t>(this->w * beta + other.w * alpha);
 	}
 
+	bool operator==(const PixelRgbw& other) const noexcept {
+		return
+			r == other.r &&
+			g == other.g &&
+			b == other.b &&
+			w == other.w;
+	}
+
+	bool operator!=(const PixelRgbw& other) const noexcept {
+		 return !(*this == other);
+	}
+
 public:
 	uint8_t g = 0;
 	uint8_t r = 0;

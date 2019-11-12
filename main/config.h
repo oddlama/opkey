@@ -147,7 +147,7 @@ inline constexpr const std::array<const char*, 90> sensorNames =
  * The threshold below which the velocity must fall after
  * a maximum to trigger a keypress.
  */
-inline constexpr const double triggerVelocityThreshold = 1.0;
+inline constexpr const double triggerVelocityThreshold = 3.0;
 
 /**
  * Maximum amount of time between velocity maximum and the trigger
@@ -166,7 +166,7 @@ inline constexpr const int64_t minTriggerJitterDelayUs = 15000;
  * be considered a trigger candidate.
  */
 inline constexpr const auto IsValidVelocityMaximum = [](double pos, double vel) {
-		return (pos > .25 && vel > 3.0) || (pos > .4 && vel > 2.0);
+		return (pos > .45 && vel > 4.5) || (pos > .6 && vel > 2.0);
 	};
 
 /**
@@ -191,12 +191,6 @@ inline constexpr const double pedalReleaseThreshold = 0.1;
 
 /** Minimum position to consider a pedal pressed */
 inline constexpr const double pedalPressThreshold = 0.2;
-
-/**
- * The alpha factor of the exponential moving average (EMA)
- * calcuation for the key velocity.
- */
-inline constexpr const double velocityEmaAlpha = 0.1;
 
 
 // ================================================================
