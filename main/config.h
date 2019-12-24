@@ -156,7 +156,7 @@ inline constexpr const double triggerVelocityThreshold = 3.0;
 inline constexpr const int64_t maxTriggerDelayUs = 40000;
 
 /**
- * Mimumum amount of time between velocity maximum and the trigger.
+ * Minimum amount of time between key release and next trigger.
  * This prevents key jitter from becoming keypresses.
  */
 inline constexpr const int64_t minTriggerJitterDelayUs = 15000;
@@ -166,7 +166,7 @@ inline constexpr const int64_t minTriggerJitterDelayUs = 15000;
  * be considered a trigger candidate.
  */
 inline constexpr const auto IsValidVelocityMaximum = [](double pos, double vel) {
-		return (pos > .45 && vel > 4.5) || (pos > .6 && vel > 2.0);
+		return (pos > .3 && vel > 4.5) || (pos > .6 && vel > 2.0);
 	};
 
 /**

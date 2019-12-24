@@ -57,7 +57,7 @@ public:
 
 	void SetHsvw(double hue, double saturation, double value, double white) {
 		color::HsvToRgb(*this, hue, saturation, value);
-		this->w = Convert(w);
+		this->w = Convert(white);
 	}
 
 	void SetLerp(const PixelRgbw& other, double alpha) {

@@ -196,39 +196,44 @@ void SensorManager::CalculateNextSensorState(size_t rawIndex, double newData) {
 					state.maxVelTime = now;
 					state.maxVelPos = state.pos;
 					state.maxVel = state.vel;
+
+			 		state.pressed = true;
+			 		state.changed = true;
+			 		state.lastPressTime = state.maxVelTime;
+			 		state.pressVelocity = CalculatePressVelocity(sensor, state);
 				}
 			}
 
-			// Check falling edge on velocity over config::triggerVelocityThreshold
-			if (prevVel > config::triggerVelocityThreshold &&
-					state.vel <= config::triggerVelocityThreshold) {
-				// Check if the trigger is still valid, and prevent triggers
-				// from key-release jittering
-				if (now - state.maxVelTime <= config::maxTriggerDelayUs &&
-						now - state.lastReleaseTime > config::minTriggerJitterDelayUs) {
-					// The position is past the high threshold
-					state.pressed = true;
-					state.changed = true;
-					state.lastPressTime = state.maxVelTime;
-					state.pressVelocity = CalculatePressVelocity(sensor, state);
-					//fmt::print("[2;37mkey[0x{:02x}, {:4s}] possible: pos {:7.2f} vel {:7.2f} EMApd{:7.2f} EMAvd {:7.2f}[m\n",
-					//	sensor.GetIndex(),
-					//	sensor.GetName(),
-					//	state.pos,
-					//	state.vel,
-					//	state.maxVelPosEma - state.maxVelPos,
-					//	state.maxVelEma - state.maxVel
-					//	);
-					//fmt::print("key[0x{:02x}, {:4s}] down: vel: {:7.2f}\n",
-					//	sensor.GetIndex(),
-					//	sensor.GetName(),
-					//	state.pressVelocity);
-				} else {
-					// The trigger has expired, reset max velocity state
-					state.maxVelTime = 0;
-					state.maxVel = 0.0;
-				}
-			}
+			// // Check falling edge on velocity over config::triggerVelocityThreshold
+			// if (prevVel > config::triggerVelocityThreshold &&
+			// 		state.vel <= config::triggerVelocityThreshold) {
+			// 	// Check if the trigger is still valid, and prevent triggers
+			// 	// from key-release jittering
+			// 	if (now - state.maxVelTime <= config::maxTriggerDelayUs &&
+			// 			now - state.lastReleaseTime > config::minTriggerJitterDelayUs) {
+			// 		// The position is past the high threshold
+			// 		state.pressed = true;
+			// 		state.changed = true;
+			// 		state.lastPressTime = state.maxVelTime;
+			// 		state.pressVelocity = CalculatePressVelocity(sensor, state);
+			// 		//fmt::print("[2;37mkey[0x{:02x}, {:4s}] possible: pos {:7.2f} vel {:7.2f} EMApd{:7.2f} EMAvd {:7.2f}[m\n",
+			// 		//	sensor.GetIndex(),
+			// 		//	sensor.GetName(),
+			// 		//	state.pos,
+			// 		//	state.vel,
+			// 		//	state.maxVelPosEma - state.maxVelPos,
+			// 		//	state.maxVelEma - state.maxVel
+			// 		//	);
+			// 		//fmt::print("key[0x{:02x}, {:4s}] down: vel: {:7.2f}\n",
+			// 		//	sensor.GetIndex(),
+			// 		//	sensor.GetName(),
+			// 		//	state.pressVelocity);
+			// 	} else {
+			// 		// The trigger has expired, reset max velocity state
+			// 		state.maxVelTime = 0;
+			// 		state.maxVel = 0.0;
+			// 	}
+			// }
 		}
 	}
 }
@@ -256,26 +261,13 @@ double SensorManager::CalculatePressVelocity(Sensor sensor, const LogicState& st
 		lastPos = pos;
 	}
 
-	double smvel = 0.0;
-	maxIdx += state.posHistory.size();
-	lastPos = state.posHistory[(maxIdx - 2) % state.posHistory.size()];
-	for (int i = maxIdx - 1; i <= maxIdx + 1; ++i) {
-		auto pos = state.posHistory[i % state.posHistory.size()];
-		auto t = state.deltaHistory[i % state.deltaHistory.size()];
-		double vel = (pos - lastPos) * (1000000.0 / t);
-		smvel += vel;
-		lastPos = pos;
-	}
-	smvel /= 3.0;
+	//fmt::print("key[0x{:02x}, {:4s}] pos {:7.2f} velMax {:7.2f}\n",
+	//	sensor.GetIndex(),
+	//	sensor.GetName(),
+	//	posAtVelMax,
+	//	velMax / 90.0);
 
-	fmt::print("key[0x{:02x}, {:4s}] pos {:7.2f} velMax {:7.2f} smvel {:7.2f}\n",
-		sensor.GetIndex(),
-		sensor.GetName(),
-		posAtVelMax,
-		velMax / 60.0,
-		smvel / 50.0);
-
-	return std::clamp(smvel / 50.0, 0.0, 1.0);
+	return std::clamp(velMax / 50.0, 0.0, 1.0);
 
 	//auto x = std::array{ velMax / 60.0, posAtVelMax };
 

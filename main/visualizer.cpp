@@ -16,6 +16,10 @@ Visualizer::Visualizer(Application& application)
 	, onMidiRecvConnection(application.GetOnMidiRecvSink().connect<&Visualizer::OnMidiRecv>(*this))
 	, sensorManager(application.GetSensorManager())
 {
+	for (auto& flag : keyInactive) {
+		flag.test_and_set(std::memory_order_release);
+	}
+
 	static auto DispatchMain = [](void* param) [[noreturn]] {
 		try {
 			static_cast<Visualizer*>(param)->TaskMain();
@@ -125,7 +129,7 @@ void Visualizer::TaskMain() {
 				//TODO VisualizeNormal();
 				Sensor::ForEachKey([&](Sensor key) {
 					size_t ledIndex = (Sensor::keyCount - 1) - key.GetKeyIndex();
-					if (not keyActive[key]) {
+					if (keyInactive[key].test_and_set(std::memory_order_release)) {
 						return;
 					}
 
@@ -143,15 +147,21 @@ void Visualizer::TaskMain() {
 						vel = 0.1 + vel * 0.9;
 					} else {
 						vel = state.pressVelocity;
-						c = -1.0 / 48.0 - softPedalState.pos / 4.0 + (2.0 / 19.0) * vel;
+						c = -1.0 / 48.0 + /* XXX pedal compensation */ 0.15 - softPedalState.pos / 4.0 + (2.0 / 19.0) * vel;
 					}
 					if (c < 0) {
 						c += 1 + static_cast<uint64_t>(-c);
 					}
 					if (state.pressed || forcePress) {
 						PixelRgbw targetColor{};
-						targetColor.SetHsvw(c, 1.0, vel, vel / 4);
+						if (forcePress) {
+							targetColor.SetHsvw(c, 1.0, vel, 0);
+						} else {
+							targetColor.SetHsvw(c, 0.6, vel, vel / 4);
+						}
+						targetColor.SetHsvw(c, 0.6, vel, vel / 4);
 						pixel.SetLerp(targetColor, 0.5);
+						keyInactive[key].clear(std::memory_order_acquire);
 					} else if (dampPedalState.pressed &&
 							dampPedalState.lastPressTime < state.lastReleaseTime) {
 						auto timeSinceKeyrelease = now - state.lastReleaseTime;
@@ -170,13 +180,14 @@ void Visualizer::TaskMain() {
 						}
 
 						PixelRgbw targetColor{};
-						targetColor.SetHsvw(c, 1.0, decay * vel, decay * vel / 4);
+						targetColor.SetHsvw(c, 0.6, decay * vel, decay * vel / 4);
 						pixel.SetLerp(targetColor, 0.5);
+						keyInactive[key].clear(std::memory_order_acquire);
 					} else {
 						PixelRgbw targetColor{};
 						pixel.SetLerp(targetColor, 0.1);
-						if (targetColor == pixel) {
-							keyActive[key] = false;
+						if (targetColor != pixel) {
+							keyInactive[key].clear(std::memory_order_acquire);
 						}
 					}
 
@@ -267,7 +278,7 @@ void Visualizer::OnSensorStateChange(const SensorManager& sensorManager, Sensor 
 		return;
 	}
 
-	keyActive[sensor] = true;
+	keyInactive[sensor].clear(std::memory_order_acquire);
 	//auto& h0 = sensorManager.GetHistory()[0];
 	//auto& state = h0.state[sensor];
 
@@ -313,7 +324,7 @@ void Visualizer::OnMidiRecv(const ble::Array<64>& midiPacket) {
 						auto sensor = Sensor{data0 - 0x15u};
 						double velocity = static_cast<double>(cur) / 0x7f;
 						receivedPresses[sensor] = velocity;
-						keyActive[sensor] = true;
+						keyInactive[sensor].clear(std::memory_order_acquire);
 						//fmt::print("recv key[0x{:02x}, {:4s}] on ({})\n",
 						//	sensor.GetIndex(),
 						//	sensor.GetName(),
@@ -328,7 +339,7 @@ void Visualizer::OnMidiRecv(const ble::Array<64>& midiPacket) {
 					} else {
 						auto sensor = Sensor{data0 - 0x15u};
 						receivedPresses[sensor] = 0.0;
-						keyActive[sensor] = true;
+						keyInactive[sensor].clear(std::memory_order_acquire);
 						//fmt::print("recv key[0x{:02x}, {:4s}] off\n",
 						//	sensor.GetIndex(),
 						//	sensor.GetName());

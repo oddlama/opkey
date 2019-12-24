@@ -13,7 +13,7 @@ import scipy
 import scipy.io.wavfile
 from scipy import signal
 
-triggerVelocityThreshold = 1.0
+triggerVelocityThreshold = 3.0
 maxTriggerDelayUs = 40000
 minTriggerJitterDelayUs = 15000
 releasePositionThreshold = 0.4
@@ -41,7 +41,7 @@ def findFromTo(b, e, t):
 
 
 def IsValidVelocityMaximum(pos, vel):
-    return ((pos > .25) and (vel >= 12.0)) or ((pos > .4) and (vel > 8.0))
+    return ((pos > .45) and (vel > 4.5)) or ((pos > .6) and (vel > 2.0))
 
 class LogicState:
     def __init__(self):
@@ -62,6 +62,8 @@ class LogicState:
         self.maxVelEma = 0.0
         self.maxVelPos = 0.0
 
+        self.samplesLowCount = 0
+
     def nextState(self, now, deltaTime, newData):
         velEmaAlpha = 0.1
 
@@ -70,6 +72,11 @@ class LogicState:
         self.pos = newData
         self.vel = (self.pos - prevPos) * (1000000.0 / deltaTime)
         self.velEma = self.velEma * (1.0 - velEmaAlpha) + self.vel * velEmaAlpha
+
+        if (prevVel < 5.0 and self.vel < 5.0):
+            self.samplesLowCount += 1
+        elif prevVel > self.vel:
+            self.samplesLowCount = 0
 
         self.changed = False
         if self.pressed:
@@ -83,37 +90,77 @@ class LogicState:
                 self.maxVelEma = 0.0
                 self.maxVelPos = 0.0
         else:
+            if (prevPos < .3 and self.pos >= .3):
+                self.allow = now
+                #self.pressed = True
+                #self.changed = True
+                #self.lastPressTime = now
+                #print("trigg {} ®{} ".format(self.vel, (self.pos - self.minPos) * (1000000 / (now - self.minTime))))
+                #self.pressVelocity = self.vel / 60.0
+                #self.pressVelocity = (self.pos - self.minPos) * (1000000 / (now - self.minTime))
+
             if self.vel > self.maxVel:
                 if IsValidVelocityMaximum(self.pos, self.vel):
                     self.maxVelTime = now
                     self.maxVel = self.vel
                     self.maxVelEma = self.velEma
                     self.maxVelPos = self.pos
-
-            if (prevVel > triggerVelocityThreshold) and (self.vel <= triggerVelocityThreshold):
-                if ((now - self.maxVelTime) <= maxTriggerDelayUs) and (now - self.lastReleaseTime > minTriggerJitterDelayUs):
-                    self.pressed = True
-                    self.changed = True
-                    self.lastPressTime = self.maxVelTime
-
-                    linearMaxVelocity = 50.0
-                    linearRange = 0.75
-                    compressedMaxVelocity = 110.0
-
-                    self.pressVelocity = self.maxVel - self.maxVelEma
-                    if self.pressVelocity < 0.0:
-                        self.pressVelocity = 0.0
-                    elif self.pressVelocity < linearMaxVelocity:
-                        self.pressVelocity = linearRange * self.pressVelocity / linearMaxVelocity
-                    elif self.pressVelocity < compressedMaxVelocity:
-                        self.pressVelocity = linearRange + (1.0 - linearRange) * (self.pressVelocity - linearMaxVelocity) / (compressedMaxVelocity - linearMaxVelocity)
+                    if True or now - self.allow < 5000:
+                        print("allow {} = {}".format(now, self.vel / 60))
+                        self.pressed = True
+                        self.changed = True
+                        self.lastPressTime = now
+                        self.pressVelocity = self.vel / 60
+                        self.allow = 0
                     else:
-                        self.pressVelocity = 1.0
-                else:
-                    self.maxVelTime = 0
-                    self.maxVel = 0.0
-                    self.maxVelEma = 0.0
-                    self.maxVelPos = 0.0
+                        print("fail {} diff {} >= 5000".format(now, now - self.allow))
+                        self.allow = 0
+                        self.maxVelTime = 0
+                        self.maxVel = 0.0
+                        self.maxVelEma = 0.0
+                        self.maxVelPos = 0.0
+                    #if self.samplesLowCount > 4:
+                    #    print("instant {}".format(self.maxVelTime))
+                    #    self.pressed = True
+                    #    self.changed = True
+                    #    self.lastPressTime = self.maxVelTime
+                    #    self.pressVelocity = self.maxVel / 60
+                    #    return
+
+            if self.pos < prevPos:
+                self.minPos = self.pos
+                self.minTime = now
+
+            #if ((prevVel > triggerVelocityThreshold) and (self.vel <= triggerVelocityThreshold)):
+            #    if ((now - self.maxVelTime) <= maxTriggerDelayUs) and (now - self.lastReleaseTime > minTriggerJitterDelayUs):
+            #        self.pressed = True
+            #        self.changed = True
+            #        self.lastPressTime = self.maxVelTime
+            #        self.pressVelocity = self.maxVel / 60
+            #    #else:
+            #    #    self.maxVelTime = 0
+            #    #    self.maxVel = 0.0
+            #    #    self.maxVelEma = 0.0
+            #    #    self.maxVelPos = 0.0
+            #elif (prevPos < .8 and self.pos >= .8):
+            #    if ((now - self.maxVelTime) <= maxTriggerDelayUs) and (now - self.lastReleaseTime > minTriggerJitterDelayUs):
+            #        print("now {}".format(self.maxVelTime))
+            #        self.pressed = True
+            #        self.changed = True
+            #        self.lastPressTime = self.maxVelTime
+            #        self.pressVelocity = self.maxVel / 60
+            #elif (prevVel - self.vel >= 20):
+            #    if ((now - self.maxVelTime) <= maxTriggerDelayUs) and (now - self.lastReleaseTime > minTriggerJitterDelayUs):
+            #        print("v now {}".format(self.maxVelTime))
+            #        self.pressed = True
+            #        self.changed = True
+            #        self.lastPressTime = self.maxVelTime
+            #        self.pressVelocity = self.maxVel / 60
+            #    #else:
+            #    #    self.maxVelTime = 0
+            #    #    self.maxVel = 0.0
+            #    #    self.maxVelEma = 0.0
+            #    #    self.maxVelPos = 0.0
 
 # Config
 includeRaw=True

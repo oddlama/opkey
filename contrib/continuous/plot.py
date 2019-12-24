@@ -27,5 +27,5 @@ if __name__ == "__main__":
     print("layouting...")
     setFigureLayout(fig)
     print("plotting...")
-    plotly.offline.plot(fig, filename=ccap.getPlotHtmlFile(), auto_open=True)
+    plotly.offline.plot(fig, filename=ccap.getPlotHtmlFile(), auto_open=False)
     print("done")

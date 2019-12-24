@@ -11,6 +11,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include <atomic>
+
 
 namespace opkey {
 
@@ -58,7 +60,7 @@ private:
 	// Led strip and sensor manager ref
 	inline constexpr static size_t ledCount = 88 * 2 - 1;
 	RmtLedStrip<PixelRgbw, RmtTimingsSk6812, ledCount> ledStrip{GPIO_NUM_32};
-	SensorTensor<bool> keyActive{};
+	SensorTensor<std::atomic_flag> keyInactive{};
 	const SensorManager& sensorManager;
 };
 
