@@ -105,3 +105,22 @@ hardware SPI driver is busy with transactions for the next sample.
 
 Please don't judge the code layout too much, the ESP SDK really seems to hate good code.
 Their giant pile of bloated cmake prevents you from using proper cmake (and forces you to use flat code layout).
+
+## Images
+
+Some images of the finished PCBs and the assembly process, as well as the BLE fluctuation.
+
+#### Boards
+
+![](https://oddlama.org/opkey/boards/0.jpg) ![](https://oddlama.org/opkey/boards/1.jpg)
+![](https://oddlama.org/opkey/boards/2.jpg) ![](https://oddlama.org/opkey/boards/3.jpg)
+
+#### Assembly
+
+![](https://oddlama.org/opkey/assembly/0.jpg) ![](https://oddlama.org/opkey/assembly/1.jpg)
+![](https://oddlama.org/opkey/assembly/2.jpg) ![](https://oddlama.org/opkey/assembly/3.jpg)
+![](https://oddlama.org/opkey/assembly/4.jpg) ![](https://oddlama.org/opkey/assembly/5.jpg)
+
+#### Other
+
+![](https://oddlama.org/opkey/other/1.jpg)
