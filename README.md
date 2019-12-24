@@ -4,11 +4,16 @@ Optical Key Sensor and MIDI controller for acoustic pianos, because why not.
 
 ## Hardware
 
+All hardware pcbs are designed in KiCad. You will find them in the `hardware/` folder.
+Do not forget to include the provided library for all components which are not found in the standard library.
+
 * The controller board
 * The sensor board (the normal 15 sensors veriant and one remainder for the low part of the keyboard)
+  - 15 sensor variant is stacked 5 times
+  - 13+2 sensors variant terminates the chain at the left end of the keyboard and adds auxiliary inputs for two pedal sensors
 * A mini board for auxiliary sensors (pedals)
 
-A basic connection diagram:
+### Connection Diagram
 
 ```
                      LED strip
@@ -55,8 +60,9 @@ The software for the ESP32 controller currently works like this:
 Core 0 is responsible for BLE communication and LED visualization.
 The BLE framework is the nimble, which is the recommended BLE framework according to Espressif.
 Unfortunately, it really isn't a piece of cake.
-See my issues [#4012](https://github.com/espressif/esp-idf/issues/4012) and [#4328](https://github.com/espressif/esp-idf/issues/4328), lets
-hope that there won't be any other issues.
+See my issues [#4012](https://github.com/espressif/esp-idf/issues/4012)
+and [#4328](https://github.com/espressif/esp-idf/issues/4328),
+lets hope that there won't be any other issues.
 
 Core 1 has been completely dedicated to this single FreeRTOS thread, to reduce scheduling
 to the bare minimum. This allows it to be fully utilized for SPI communication and key state
@@ -68,7 +74,7 @@ Nontheless, this still gives us somewhat deterministic timings between sensor re
 SPI communication is polling, allowing us to process the previous sample while the
 hardware SPI driver is busy with transactions for the next sample.
 
-Overview:
+### Software summary
 
 #### Core 0:
 
