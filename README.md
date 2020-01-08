@@ -24,7 +24,7 @@ Do not forget to include the provided library for all components which are not f
   ║ ║                                                     ║
 ┌─╨─╨──────────┐ ┌────────────┐     ┌────────────┐  ┌─────╨──────┐
 │ 13+2 Sensors │ │ 15 Sensors │  …  │ 15 Sensors │  │ Controller │
-│    Board 0   ╞═╡   Board 1  ╞/ … /╡   Board 6  ╞══╡ Controller ╞═ [+5V]
+│    Board 1   ╞═╡   Board 2  ╞/ … /╡   Board 6  ╞══╡ Controller ╞═ [+5V]
 └──────────────┘ └────────────┘     └────────────┘  └────────────┘
 ```
 
