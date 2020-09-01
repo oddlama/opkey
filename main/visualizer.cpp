@@ -149,6 +149,8 @@ void Visualizer::TaskMain() {
 						vel = state.pressVelocity;
 						c = -1.0 / 48.0 + /* XXX pedal compensation */ 0.15 - softPedalState.pos / 4.0 + (2.0 / 19.0) * vel;
 					}
+					// NICE BLUE c = .55 + vel * 0.03;
+					c = -0.15 + (key.GetKeyIndex() / 88.0) * (1 + 0.15) * 0.25 + vel * 0.01;
 					if (c < 0) {
 						c += 1 + static_cast<uint64_t>(-c);
 					}
@@ -159,7 +161,8 @@ void Visualizer::TaskMain() {
 						} else {
 							targetColor.SetHsvw(c, 0.6, vel, vel / 4);
 						}
-						targetColor.SetHsvw(c, 0.6, vel, vel / 4);
+						auto sat = vel * vel;
+						targetColor.SetHsvw(c, 1.0, 0.6 + sat * 0.4, std::clamp(0.5 - sat, 0.0, 1.0) * 0.1);
 						pixel.SetLerp(targetColor, 0.5);
 						keyInactive[key].clear(std::memory_order_acquire);
 					} else if (dampPedalState.pressed &&

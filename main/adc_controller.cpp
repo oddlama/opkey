@@ -44,7 +44,7 @@ void AdcController::InitSpi() {
 		, hspi.AddDevice("adc2", config::hspi.pinCs[2], config::spiFrequency)
 		, vspi.AddDevice("adc3", config::vspi.pinCs[0], config::spiFrequency)
 		, vspi.AddDevice("adc4", config::vspi.pinCs[1], config::spiFrequency)
-		, vspi.AddDevice("adc5", config::vspi.pinCs[2], config::spiFrequency)
+		//TODO temporarily disabled adc5   , vspi.AddDevice("adc5", config::vspi.pinCs[2], config::spiFrequency)
 		};
 }
 

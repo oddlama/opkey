@@ -65,7 +65,7 @@ inline constexpr const int spiFrequency = SPI_MASTER_FREQ_10M / 2;
 // Adc Config
 // ================================================================
 
-inline constexpr const int numAdcs = 6;
+inline constexpr const int numAdcs = 5; // TODO temporarily disabled adc5 (was 6)
 inline constexpr const size_t numChannels = 15;
 inline constexpr const size_t defaultMultisamples = 64;
 

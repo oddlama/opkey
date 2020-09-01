@@ -248,12 +248,16 @@ double SensorManager::CalculatePressVelocity(Sensor sensor, const LogicState& st
 
 	auto lastPos = state.posHistory[from % state.posHistory.size()];
 	// Iterate oldest+1 to newest
+	double vel_acc_avg = 0.0;
+	int vel_acc_avg_cnt = 0;
 	for (int i = from + 1; i < to; ++i) {
 		auto pos = state.posHistory[i % state.posHistory.size()];
 		auto t = state.deltaHistory[i % state.deltaHistory.size()];
 		double vel = (pos - lastPos) * (1000000.0 / t);
 		//fmt::print("pos {} in {}us; vel {}\n", pos, t, vel);
 		if (vel > velMax) {
+			vel_acc_avg += vel;
+			++vel_acc_avg_cnt;
 			velMax = vel;
 			maxIdx = i;
 			posAtVelMax = pos;
@@ -261,13 +265,17 @@ double SensorManager::CalculatePressVelocity(Sensor sensor, const LogicState& st
 		lastPos = pos;
 	}
 
-	//fmt::print("key[0x{:02x}, {:4s}] pos {:7.2f} velMax {:7.2f}\n",
+	vel_acc_avg /= vel_acc_avg_cnt;
+	vel_acc_avg -= 3.0;
+
+	//fmt::print("key[0x{:02x}, {:4s}] >>> vaa {:7.2f} <<< pos {:7.2f} velMax {:7.2f}\n",
 	//	sensor.GetIndex(),
 	//	sensor.GetName(),
+	//	vel_acc_avg,
 	//	posAtVelMax,
-	//	velMax / 90.0);
+	//	velMax / 50.0);
 
-	return std::clamp(velMax / 50.0, 0.0, 1.0);
+	return std::clamp(vel_acc_avg / 17.0, 0.0, 1.0);
 
 	//auto x = std::array{ velMax / 60.0, posAtVelMax };
 
